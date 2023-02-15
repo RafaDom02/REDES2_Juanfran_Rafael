@@ -5,10 +5,11 @@
 #include <netinet/in.h>
 #include <arpa/inet.h>
 #include <sys/types.h>
-#include "chat.h"
+#include "http.h"
+#include "confuse.h"
 
 #define MAX 80
-#define PORT 8080
+#define PORT 8081
 
 
 int main(int argv, char** argc){
@@ -22,7 +23,7 @@ int main(int argv, char** argc){
         perror("socket creation failed.\n");
         return EXIT_FAILURE;
     }
-    inet_pton(AF_INET, "192.168.122.26", &servaddr.sin_addr.s_addr);
+    inet_pton(AF_INET, "192.168.218.26", &servaddr.sin_addr.s_addr);
 
 
     /****Asignamos una direccion IP y un PORT****/
@@ -56,7 +57,7 @@ int main(int argv, char** argc){
     else
         perror("Server accept the client...\n");
 
-    chat(connfd);
+    http(connfd);
 
     close(connfd);
     close(soc);

@@ -26,7 +26,8 @@ int chat(int fd){
         else if (strcmp(buffer, "\n") != 0){
             printf("Respuesta %s.\n", buffer);
 
-            sprintf(response, "Cagaste!\n");
+            scanf("%s", response);
+
 
             write(fd, response, sizeof(response));
         }
