@@ -2,8 +2,6 @@
 #include <string.h>
 #include <stdlib.h>
 
-
-
 char* html_parser(char* html){
     FILE* f;
     char* ret = "";
@@ -36,4 +34,24 @@ char* html_parser(char* html){
     return ret;
 }
 
+long get_html_length(char* html){
+    FILE *f;
+    long size_f;
 
+    if (!html)
+        return NULL;
+
+    f = fopen(html, "r");
+    if (!f){
+        printf("No file");
+        return NULL;
+    }
+
+    fseek(f, 0, SEEK_END);
+    size_f = ftell(f);
+    fseek(f, 0, SEEK_SET);
+
+    fclose(f);
+
+    return size_f; 
+}

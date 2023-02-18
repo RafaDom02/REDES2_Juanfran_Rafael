@@ -9,13 +9,19 @@
 #include "confuse.h"
 
 #define MAX 80
-#define PORT 8081
 
 
 int main(int argv, char** argc){
     
-    int soc, connfd, len;
+    int soc, connfd, len, port;
     struct sockaddr_in servaddr, cli;
+
+    if(argv < 2){
+        perror("Ejecution format: ./main <PORT>");
+        return EXIT_FAILURE;
+    }
+
+    port = atoi(argc[1]);
 
     /****Creacion de socket****/
     soc = socket(AF_INET, SOCK_STREAM, 0);
@@ -29,12 +35,13 @@ int main(int argv, char** argc){
     /****Asignamos una direccion IP y un PORT****/
     servaddr.sin_family = AF_INET;
     //servaddr.sin_addr.s_addr = htonl(INADDR_ANY);   //asignacion IP --> localhost
-    servaddr.sin_port = htons(PORT);                //asignacion PORT --> 8080
+    servaddr.sin_port = htons(port);                //asignacion PORT --> 8080
 
     /****Asignamos el socket la direccion IP y el PORT****/
     if ((bind(soc, (struct sockaddr*)&servaddr, sizeof(servaddr))) != 0) {
         perror("socket bind failed...\n");
-        exit(0);
+        close(soc);
+        return EXIT_FAILURE;
     }
     else
         fprintf(stdout, "Socket successfully binded..\n");   
@@ -42,7 +49,8 @@ int main(int argv, char** argc){
     /****El servidor espera un paquete****/
      if ((listen(soc, 5)) != 0) {
         perror("Listen failed...\n");
-        exit(0);
+        close(soc);
+        return EXIT_FAILURE;
     }
     else
         perror("Server listening..\n");
@@ -52,7 +60,7 @@ int main(int argv, char** argc){
     connfd = accept(soc, (struct sockaddr*)&cli, &len);
     if (connfd < 0) {
         perror("Server accept failed...\n");
-        exit(0);
+        return EXIT_FAILURE;
     }
     else
         perror("Server accept the client...\n");
@@ -62,5 +70,6 @@ int main(int argv, char** argc){
     close(connfd);
     close(soc);
     
+    return EXIT_FAILURE;
 }
 

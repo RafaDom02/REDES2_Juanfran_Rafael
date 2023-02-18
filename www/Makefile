@@ -17,12 +17,12 @@ directories: ${INCLUDE} ${OBJDIR} ${SRCDIR} ${RESULTS}
 clean :
 	rm -f ${OBJDIR}/*.o core $(EXE)
 
-$(EXE) : % : ${OBJDIR}/main.o ${OBJDIR}/http.o ${OBJDIR}/picohttpparser.o  ${OBJDIR}/htmlparser.o
+$(EXE) : % : ${OBJDIR}/main.o ${OBJDIR}/http.o ${OBJDIR}/picohttpparser.o  ${OBJDIR}/htmlparser.o ${OBJDIR}/threadpool.o
 	@echo "#---------------------------"
 	@echo "# Generating $@ "
 	@echo "# Depepends on $^"
 	@echo "# Has changed $<"
-	$(CC) $(CFLAGS) -o $@ ${OBJDIR}/main.o ${OBJDIR}/http.o ${OBJDIR}/picohttpparser.o ${OBJDIR}/htmlparser.o
+	$(CC) $(CFLAGS) -o $@ ${OBJDIR}/main.o ${OBJDIR}/http.o ${OBJDIR}/picohttpparser.o ${OBJDIR}/htmlparser.o ${OBJDIR}/threadpool.o
 
 
 ${OBJDIR}/%.o: ${SRCDIR}/%.c
