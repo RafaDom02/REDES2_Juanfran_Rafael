@@ -1,13 +1,14 @@
 # Byte-compiled / optimized / DLL files
 .vsconde/
 vscode/
-obj/
+server
 __pycache__/
 *.py[cod]
 *$py.class
 
 # C extensions
 *.so
+*.o
 
 # Distribution / packaging
 .Python
