@@ -6,15 +6,17 @@
 #include <arpa/inet.h>
 #include <sys/types.h>
 #include "http.h"
-#include "confuse.h"
+#include "ip.h"
 
 #define MAX 80
 
 
 int main(int argv, char** argc){
     
-    int soc, connfd, len, port;
+    int soc, connfd, port;
+    socklen_t len;
     struct sockaddr_in servaddr, cli;
+    const char *ip;
 
     if(argv < 2){
         perror("Ejecution format: ./main <PORT>");
@@ -29,7 +31,14 @@ int main(int argv, char** argc){
         perror("socket creation failed.\n");
         return EXIT_FAILURE;
     }
-    inet_pton(AF_INET, "192.168.218.26", &servaddr.sin_addr.s_addr);
+
+    ip = getIP();
+
+    if(!inet_pton(AF_INET, ip, &servaddr.sin_addr.s_addr))
+    {
+        perror("can not connect to IP.\n");
+        return EXIT_FAILURE;
+    }
 
 
     /****Asignamos una direccion IP y un PORT****/

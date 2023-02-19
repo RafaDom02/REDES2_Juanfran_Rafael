@@ -28,4 +28,4 @@ int threadpool_start(threadpool *tp);
  * @brief Elimina el pthreadpool
  * 
  */
-void threadpool_destroy(threadpool *tp)
+void threadpool_destroy(threadpool *tp);
