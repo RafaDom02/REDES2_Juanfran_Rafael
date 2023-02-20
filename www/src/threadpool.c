@@ -24,7 +24,7 @@ threadpool* threadpool_create(int num_threads){
     if(!tp) return tp;
 
     tp->threads = (pthread_t*)malloc(num_threads*sizeof(pthread_t));
-    if(!tp->threads)
+    if(!(tp->threads))
     {
         free(tp);
         return NULL;

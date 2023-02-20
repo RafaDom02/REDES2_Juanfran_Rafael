@@ -6,8 +6,8 @@ INCLUDE = ./include
 RESULTS = ./resultados
 #-----------------------
 CC = gcc -pthread  -pedantic -O3 -DNDEBUG
-CFLAGS = -Wall -g
-IFLAGS = -I ${INCLUDE}
+CFLAGS = -Wall -g 
+IFLAGS = -l:libconfuse.a -I ${INCLUDE}
 EXE := server
 
 all : directories $(EXE)
@@ -17,12 +17,12 @@ directories: ${INCLUDE} ${OBJDIR} ${SRCDIR} ${RESULTS}
 clean :
 	rm -f ${OBJDIR}/*.o core $(EXE)
 
-$(EXE) : % : ${OBJDIR}/main.o ${OBJDIR}/http.o ${OBJDIR}/picohttpparser.o  ${OBJDIR}/htmlparser.o ${OBJDIR}/threadpool.o ${OBJDIR}/ip.o
+$(EXE) : % : ${OBJDIR}/main.o ${OBJDIR}/http.o ${OBJDIR}/picohttpparser.o  ${OBJDIR}/htmlparser.o ${OBJDIR}/threadpool.o ${OBJDIR}/ip.o ${OBJDIR}/conf.o 
 	@echo "#---------------------------"
 	@echo "# Generating $@ "
 	@echo "# Depepends on $^"
 	@echo "# Has changed $<"
-	$(CC) $(CFLAGS) -o $@ ${OBJDIR}/main.o ${OBJDIR}/http.o ${OBJDIR}/picohttpparser.o ${OBJDIR}/htmlparser.o ${OBJDIR}/threadpool.o ${OBJDIR}/ip.o
+	$(CC) $(CFLAGS) -o $@ ${OBJDIR}/main.o ${OBJDIR}/http.o ${OBJDIR}/picohttpparser.o ${OBJDIR}/htmlparser.o ${OBJDIR}/threadpool.o ${OBJDIR}/ip.o ${OBJDIR}/conf.o ${IFLAGS}
 
 
 ${OBJDIR}/%.o: ${SRCDIR}/%.c

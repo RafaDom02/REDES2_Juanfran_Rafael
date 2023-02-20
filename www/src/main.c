@@ -5,25 +5,28 @@
 #include <netinet/in.h>
 #include <arpa/inet.h>
 #include <sys/types.h>
-#include "http.h"
+#include <string.h>
+#include "confuse.h"
 #include "ip.h"
+#include "http.h"
+#include "conf.h"
 
 #define MAX 80
 
 
 int main(int argv, char** argc){
     
-    int soc, connfd, port;
+    int soc, connfd, port, ret;
     socklen_t len;
     struct sockaddr_in servaddr, cli;
-    const char *ip;
-
-    if(argv < 2){
-        perror("Ejecution format: ./main <PORT>");
-        return EXIT_FAILURE;
-    }
-
-    port = atoi(argc[1]);
+    char *ip;
+    //servaddr.sin_addr.s_addr = INADDR_ANY;
+    ret = 0;
+    cfg_t* conf = NULL;
+   
+    conf = get_conf();
+    port = cfg_getint(conf, "port");
+    
 
     /****Creacion de socket****/
     soc = socket(AF_INET, SOCK_STREAM, 0);
@@ -32,9 +35,14 @@ int main(int argv, char** argc){
         return EXIT_FAILURE;
     }
 
-    ip = getIP();
+    ip = cfg_getstr(conf, "ip");
 
-    if(!inet_pton(AF_INET, ip, &servaddr.sin_addr.s_addr))
+    if(strcmp(ip,"Default") == 0) ip = getIP(cfg_getstr(conf,"interface"));
+
+
+    ret = inet_pton(AF_INET, ip, &servaddr.sin_addr.s_addr);
+
+    if(!ret)
     {
         perror("can not connect to IP.\n");
         return EXIT_FAILURE;

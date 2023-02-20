@@ -1,3 +1,6 @@
+#ifndef _THREADPOOL_H
+#define _THREADPOOL_H
+
 #define NUM_MAX_THREADS 100
 
 typedef struct _threadpool
@@ -29,3 +32,5 @@ int threadpool_start(threadpool *tp);
  * 
  */
 void threadpool_destroy(threadpool *tp);
+
+#endif

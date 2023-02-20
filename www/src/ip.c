@@ -1,61 +1,63 @@
-#include <stdio.h>	//printf
-#include <string.h>	//memset
-#include <errno.h>	//errno
-#include <sys/socket.h>	//socket
-#include <netinet/in.h> //sockaddr_in
-#include <arpa/inet.h>	//getsockname
-#include <unistd.h>	//close
-#include "ip.h"
+#include <stdio.h>
+#include <unistd.h>
+#include <string.h> /* for strncpy */
 
-const char* getIP()
+#include <sys/types.h>
+#include <sys/socket.h>
+#include <sys/ioctl.h>
+#include <netinet/in.h>
+#include <net/if.h>
+#include <arpa/inet.h>
+
+char *getIP(char *interface)
 {
-    //Nos conectamos al servidor de google para obtener nuestra IP
-    const char* google_dns_server = "8.8.8.8";
-    int dns_port = 53;
-    struct sockaddr_in name;
-    socklen_t namelen = sizeof(name);
-    char buffer[100];
-    const char* ip;
-	
-	struct sockaddr_in serv;
-    
-    int sock = socket ( AF_INET, SOCK_DGRAM, 0);
-    
-    //Socket could not be created
-    if(sock < 0)
-    {
-		perror("Socket error");
-	}
-    
-	memset( &serv, 0, sizeof(serv) );
-    serv.sin_family = AF_INET;
-    serv.sin_addr.s_addr = inet_addr( google_dns_server );
-    serv.sin_port = htons( dns_port );
 
-    if(connect( sock , (const struct sockaddr*) &serv , sizeof(serv) ))
-    {
-        perror("connection can not be establised .\n");
-        close(sock);
-        return NULL;
-    }
-    
-    if(getsockname(sock, (struct sockaddr*) &name, &namelen))
-    {
-        perror("unobtainable sockname.\n");
-        close(sock);
-        return NULL;
-    }
-    	
-    ip = inet_ntop(AF_INET, &name.sin_addr, buffer, 100);
-	if(!ip)
+	int fd;
+	struct ifreq ifr;
+	FILE *f;
+	char line[100], *p, *c;
+	char *ip = NULL;
+
+	if (strcmp(interface, "Default") == 0)
 	{
-		//Some error
-		fprintf(stderr,"Error number : %d . Error message : %s \n" , errno , strerror(errno));
-        close(sock);
-        return NULL;
+
+		f = fopen("/proc/net/route", "r");
+
+		while (fgets(line, 100, f))
+		{
+			p = strtok(line, " \t");
+			c = strtok(NULL, " \t");
+
+			if (p != NULL && c != NULL)
+			{
+				if (strcmp(c, "00000000") == 0)
+				{
+					break;
+				}
+			}
+		}
 	}
-    printf("%s\n", ip);
-    close(sock);
-    
-    return ip;
+    else{
+        p = interface;
+    }
+	fd = socket(AF_INET, SOCK_DGRAM, 0);
+
+	/* I want to get an IPv4 IP address */
+	ifr.ifr_addr.sa_family = AF_INET;
+
+	/* I want IP address attached to "eth0" */
+	strncpy(ifr.ifr_name, p, IFNAMSIZ - 1);
+
+	ioctl(fd, SIOCGIFADDR, &ifr);
+
+	close(fd);
+
+	/* display result */
+	ip = inet_ntoa(((struct sockaddr_in *)&ifr.ifr_addr)->sin_addr);
+	if (!ip)
+	{
+		return NULL;
+	}
+
+	return ip;
 }
