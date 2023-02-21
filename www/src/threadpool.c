@@ -6,9 +6,7 @@
 #include "threadpool.h"
 
 void* thread_routine(void *arg){
-    threadpool *tp;
-
-    tp = (threadpool*) arg;
+    threadpool *tp = (threadpool*) arg;
 
     while(1){
         //Lo que tenga que haccer el thread
