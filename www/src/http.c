@@ -53,11 +53,18 @@ int http(int sock){
         return -1;
     prevbuflen = buflen;
     buflen += rret;
+
+    
+    if (buf)
+        printf("%s\n",buf);
     /* parse the request */
     num_headers = sizeof(headers) / sizeof(headers[0]);
     pret = phr_parse_request(buf, buflen, &method, &method_len, &path, &path_len,
-                             &minor_version, headers, &num_headers, prevbuflen);
-    if (pret > 0)
+                             &minor_version, headers, &num_headers, prevbuflen,);
+    printf("pret:%d\n",pret);
+    if (pret >= 0){
+       
+    
     
         path[path_len] = '\0';
 
@@ -75,25 +82,28 @@ int http(int sock){
 
         case 'O':
             response = OPTIONS();
+            break;
         
         default:
-            return -1;
+            
         }
 
         //response = phr_parse      _response(response, sizeof(response), minor_version, )
+
+        pret = phr_parse_response(response, strlen(response),&minor_version,NULL,&response, strlen(response),headers, &num_headers,)
 
         int a = write(sock, response, 5374);
         printf("%d\n", a);
 
         if (minor_version == 0)
             break;
-    else if (pret == -1)
-        return -1;
+    }
+    
+        
     /* request is incomplete, continue the loop */
-    assert(pret == -2);
+    
        
-    if (buflen == sizeof(buf))
-        return -2;
+    
     }
     int i = 0;
 
