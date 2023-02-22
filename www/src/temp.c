@@ -1,101 +1,89 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <errno.h>
+#include <unistd.h>
+#include <arpa/inet.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
-#include <unistd.h>
-#include <pthread.h>
+#include "picohttpparser.h"
 
-#define PORT 8080
-#define RESPONSE_HEADER "HTTP/1.1 200 OK\r\nContent-Type: text/html\r\n\r\n"
+#define MAX_REQUEST_SIZE 4096
+#define MAX_RESPONSE_SIZE 4096
 
-typedef struct {
-    int socket_fd;
-    struct sockaddr_in address;
-} connection_t;
+int main() {
+    int sockfd, newsockfd;
+    struct sockaddr_in serv_addr, cli_addr;
+    socklen_t cli_len;
+    char request[MAX_REQUEST_SIZE], response[MAX_RESPONSE_SIZE];
+    int bytes_received, bytes_sent;
+    int num_headers, method, minor_version, status;
+    const char *msg, *method_str, *path;
+    struct phr_header headers[100];
 
-void *handle_connection(void *arg) {
-    connection_t *conn = (connection_t *)arg;
-    char *response_body = "<html><body><h1>Hello, world!</h1></body></html>";
-
-    char buffer[30000] = {0};
-    read(conn->socket_fd, buffer, 30000);
-    printf("%s\n", buffer);
-
-    char response[35000] = {0};
-    strcat(response, RESPONSE_HEADER);
-    strcat(response, response_body);
-    send(conn->socket_fd, response, strlen(response), 0);
-    close(conn->socket_fd);
-
-    free(conn);
-    return NULL;
-}
-
-int main(int argc, char const *argv[]) {
-    int server_fd;
-    struct sockaddr_in address;
-    int addrlen = sizeof(address);
-
-    // Crear socket del servidor
-    if ((server_fd = socket(AF_INET, SOCK_STREAM, 0)) == 0) {
-        perror("socket failed");
-        exit(EXIT_FAILURE);
+    // create socket
+    sockfd = socket(AF_INET, SOCK_STREAM, 0);
+    if (sockfd < 0) {
+        perror("ERROR opening socket");
+        exit(1);
     }
 
-    // Configurar dirección del servidor
-    address.sin_family = AF_INET;
-    address.sin_addr.s_addr = INADDR_ANY;
-    address.sin_port = htons(PORT);
-
-    // Asignar dirección al socket del servidor
-    if (bind(server_fd, (struct sockaddr *)&address, sizeof(address)) < 0) {
-        perror("bind failed");
-        exit(EXIT_FAILURE);
+    // bind to port 8080
+    memset(&serv_addr, 0, sizeof(serv_addr));
+    serv_addr.sin_family = AF_INET;
+    serv_addr.sin_addr.s_addr = INADDR_ANY;
+    serv_addr.sin_port = htons(8080);
+    if (bind(sockfd, (struct sockaddr *) &serv_addr, sizeof(serv_addr)) < 0) {
+        perror("ERROR on binding");
+        exit(1);
     }
 
-    // Escuchar por nuevas conexiones
-    if (listen(server_fd, 3) < 0) {
-        perror("listen failed");
-        exit(EXIT_FAILURE);
-    }
+    // listen for incoming connections
+    listen(sockfd, 5);
+    printf("Server listening on port 8080...\n");
 
-    // Configurar threadpool
-    int num_threads = 4;
-    pthread_t *threads = malloc(sizeof(pthread_t) * num_threads);
-    int i;
-    for (i = 0; i < num_threads; i++) {
-        pthread_create(&threads[i], NULL, &handle_connection, NULL);
-    }
-
-    // Esperar por nuevas conexiones y enviar respuesta
     while (1) {
-        int new_socket;
-        struct sockaddr_in client_address;
-        int client_addrlen = sizeof(client_address);
-        if ((new_socket = accept(server_fd, (struct sockaddr *)&client_address, (socklen_t*)&client_addrlen)) < 0) {
-            perror("accept failed");
-            exit(EXIT_FAILURE);
+        // accept incoming connection
+        cli_len = sizeof(cli_addr);
+        newsockfd = accept(sockfd, (struct sockaddr *) &cli_addr, &cli_len);
+        if (newsockfd < 0) {
+            perror("ERROR on accept");
+            exit(1);
         }
 
-        connection_t *conn = malloc(sizeof(connection_t));
-        conn->socket_fd = new_socket;
-        conn->address = client_address;
+        // read request
+        bytes_received = recv(newsockfd, request, MAX_REQUEST_SIZE, 0);
+        if (bytes_received < 0) {
+            perror("ERROR reading from socket");
+            exit(1);
+        }
 
-        // Agregar conexión al threadpool
-        for (i = 0; i < num_threads; i++) {
-            if (pthread_tryjoin_np(threads[i], NULL) == 0) {
-                pthread_create(&threads[i], NULL, &handle_connection, (void *)conn);
-                break;
+        // parse request
+        num_headers = sizeof(headers) / sizeof(headers[0]);
+        if (phr_parse_request(request, bytes_received, &method_str, &method, &path, &minor_version, headers, &num_headers, 0) != bytes_received) {
+            sprintf(response, "HTTP/1.1 400 Bad Request\r\nContent-Length: 0\r\n\r\n");
+            bytes_sent = send(newsockfd, response, strlen(response), 0);
+            if (bytes_sent < 0) {
+                perror("ERROR writing to socket");
+                exit(1);
             }
+            close(newsockfd);
+            continue;
         }
 
-        if (i == num_threads) {
-            printf("Threadpool is full, cannot accept new connection.\n");
-            close(new_socket);
-            free(conn);
-        }
-    }
+        printf("Received request:\n%s", request);
+        printf("Method: %.*s\n", (int)(method_str - request), method_str);
+        printf("Path: %.*s\n", (int)(path - request), path);
 
-    return 0;
-}
+        // create response
+        if (method == HTTP_GET) {
+            sprintf(response, "HTTP/1.1 200 OK\r\nContent-Length: 12\r\n\r\nHello World!");
+        } else {
+            sprintf(response, "HTTP/1.1 405 Method Not Allowed\r\nContent-Length: 0\r\n\r\n");
+        }
+
+        // send response
+        bytes_sent = send(newsockfd, response, strlen(response), 0);
+        if (bytes_sent < 0) {
+            perror("ERROR writing to socket");
+            exit(

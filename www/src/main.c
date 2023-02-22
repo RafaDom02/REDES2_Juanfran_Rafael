@@ -5,6 +5,7 @@
 #include <netinet/in.h>
 #include <arpa/inet.h>
 #include <sys/types.h>
+#include <signal.h>
 #include <string.h>
 #include "confuse.h"
 #include "ip.h"
@@ -13,10 +14,17 @@
 
 #define MAX 80
 
+int soc;
+
+int sigint_handler(){
+    free(soc);
+    exit(EXIT_SUCCESS);
+}
+
 
 int main(int argv, char** argc){
     
-    int soc, connfd, port, ret;
+    int connfd, port, ret;
     socklen_t len;
     struct sockaddr_in servaddr, cli;
     char *ip;
@@ -33,6 +41,12 @@ int main(int argv, char** argc){
     if(soc < 0){
         perror("socket creation failed.\n");
         return EXIT_FAILURE;
+    }
+
+    if (signal(SIGINT, sigint_handler) == SIG_ERR){
+        close(soc);
+        perror("signal");
+        exit(1);
     }
 
     ip = cfg_getstr(conf, "ip");

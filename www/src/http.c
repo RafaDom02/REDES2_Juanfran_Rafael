@@ -9,6 +9,8 @@
 #include "http.h"
 #include "errno.h"
 #include "htmlparser.h"
+#include <sys/types.h>
+#include <sys/socket.h>
 
 #define INDEX1 "/index.html"
 #define INDEX2 "/"
@@ -37,7 +39,8 @@ char* OPTIONS(){
 
 
 int http(int sock){
-    char buf[4096], *method, *path;
+    char buf[10000], *method, *path;
+    int dd;
     int pret, minor_version;
     struct phr_header headers[100];
     size_t buflen = 0, prevbuflen = 0, method_len, path_len, num_headers;
@@ -55,12 +58,11 @@ int http(int sock){
     buflen += rret;
 
     
-    if (buf)
-        printf("%s\n",buf);
+    
     /* parse the request */
     num_headers = sizeof(headers) / sizeof(headers[0]);
     pret = phr_parse_request(buf, buflen, &method, &method_len, &path, &path_len,
-                             &minor_version, headers, &num_headers, prevbuflen,);
+                             &minor_version, headers, &num_headers, prevbuflen);
     printf("pret:%d\n",pret);
     if (pret >= 0){
        
@@ -68,15 +70,16 @@ int http(int sock){
     
         path[path_len] = '\0';
 
-
+        printf("path:%s", path);
         switch (method[0])
         {
-        printf("%s", path);
+        
         case 'G':
             response = GET(path);
             break;
 
         case 'P':
+            printf("POST\n");
             response = POST();
             break;
 
@@ -88,11 +91,18 @@ int http(int sock){
             
         }
 
-        //response = phr_parse      _response(response, sizeof(response), minor_version, )
-
-        pret = phr_parse_response(response, strlen(response),&minor_version,NULL,&response, strlen(response),headers, &num_headers,)
-
-        int a = write(sock, response, 5374);
+    
+        printf("null: %s", response);
+        int status = 0;
+        int msglen = 0;
+        msglen = strlen(response);
+        strcpy(buf, "HTTP/1.1\n");
+        sprintf(buf,"HTTP/1.1 200 OK\r\nContent-Type: text/html\r\nContent-Lenght: %d\r\n\r\n",msglen);
+        strcat(buf, response);
+        pret = phr_parse_response(buf, strlen(buf),&minor_version,&status,&response, &msglen,headers, &num_headers,prevbuflen);
+        
+        
+        int a = send(sock, buf, strlen(buf),0);
         printf("%d\n", a);
 
         if (minor_version == 0)
