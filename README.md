@@ -1,5 +1,10 @@
 # REDES2_Juanfran_Rafael
 
+Ramas existentes:
+    main (no tocar)
+    
+    develop
+
 Comandos:
 
     Cambiar de branch:
@@ -13,6 +18,9 @@ Comandos:
     ./server
     
 ToDo:
-    - Hacer que funcione con el threadpool
-    - Que se visualicen las imagenes
-    - Que funcionen los metodos POST/OPTIONS
+
+    Hacer que funcione con el threadpool
+    
+    Que se visualicen las imagenes
+    
+    Que funcionen los metodos POST/OPTIONS
