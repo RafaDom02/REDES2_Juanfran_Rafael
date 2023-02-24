@@ -15,7 +15,7 @@ char *getIP(char *interface)
 	int fd;
 	struct ifreq ifr;
 	FILE *f;
-	char line[100], *p, *c;
+	char line[100], *p = NULL, *c;
 	char *ip = NULL;
 
 	if (strcmp(interface, "Default") == 0)

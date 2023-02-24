@@ -16,8 +16,8 @@
 
 int soc;
 
-int sigint_handler(){
-    free(soc);
+void sigint_handler(){
+    close(soc);
     exit(EXIT_SUCCESS);
 }
 

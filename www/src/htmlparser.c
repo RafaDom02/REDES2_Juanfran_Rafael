@@ -28,30 +28,12 @@ char* html_parser(char* html){
         return NULL;
     }
 
-    fread(ret, 1, size_f, f);
+    if(fread(ret, 1, size_f, f) == 0){
+        fclose(f);
+        return NULL;
+    }
+    
     fclose(f);
     ret[size_f-1] = '\0';
     return ret;
-}
-
-long get_html_length(char* html){
-    FILE *f;
-    long size_f;
-
-    if (!html)
-        return NULL;
-
-    f = fopen(html, "r");
-    if (!f){
-        printf("No file");
-        return NULL;
-    }
-
-    fseek(f, 0, SEEK_END);
-    size_f = ftell(f);
-    fseek(f, 0, SEEK_SET);
-
-    fclose(f);
-
-    return size_f; 
 }
