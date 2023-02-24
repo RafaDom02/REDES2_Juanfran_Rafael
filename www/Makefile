@@ -23,6 +23,7 @@ $(EXE) : % : ${OBJDIR}/main.o ${OBJDIR}/http.o ${OBJDIR}/picohttpparser.o  ${OBJ
 	@echo "# Depepends on $^"
 	@echo "# Has changed $<"
 	$(CC) $(CFLAGS) -o $@ ${OBJDIR}/main.o ${OBJDIR}/http.o ${OBJDIR}/picohttpparser.o ${OBJDIR}/htmlparser.o ${OBJDIR}/threadpool.o ${OBJDIR}/ip.o ${OBJDIR}/conf.o ${IFLAGS}
+	rm -f ${OBJDIR}/*.o
 
 
 ${OBJDIR}/%.o: ${SRCDIR}/%.c
