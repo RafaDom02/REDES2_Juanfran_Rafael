@@ -5,8 +5,8 @@ OBJDIR = ./obj
 INCLUDE = ./include
 RESULTS = ./resultados
 #-----------------------
-CC = gcc -pthread  -pedantic -O3 -DNDEBUG
-CFLAGS = -Wall -g 
+CC = gcc -pthread  
+CFLAGS = -g 
 IFLAGS = -l:libconfuse.a -I ${INCLUDE}
 EXE := server
 

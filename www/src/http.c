@@ -11,19 +11,19 @@
 #include "htmlparser.h"
 #include <sys/types.h>
 #include <sys/socket.h>
-
+#include "types.h"
+ 
 #define INDEX1 "/index.html"
 #define INDEX2 "/"
 
-char *GET(const char *path)
-{
-    if (!path)
-        return NULL;
+OBJ type = HTML;
 
-    if (strcmp(INDEX1, path) == 0 || strcmp(INDEX2, path) == 0)
-    {
-        return html_parser("index.html");
-    }
+void *GET(const char *path)
+{
+    if (!path) return NULL;
+
+    if (strcmp(INDEX1, path) == 0 || strcmp(INDEX2, path) == 0) return html_parser("index.html");
+
     return NULL;
 }
 
@@ -41,7 +41,7 @@ int http(int sock)
 {
     char buf[10000];
     const char *method, *path;
-    int pret, minor_version, msglen = 0;
+    int pret, minor_version, msglen = 0, i;
     struct phr_header headers[100];
     size_t buflen = 0, prevbuflen = 0, method_len, path_len, num_headers;
     ssize_t rret;
@@ -50,43 +50,36 @@ int http(int sock)
     while (1)
     {
         /* read the request */
-        while ((rret = read(sock, buf + buflen, sizeof(buf) - buflen)) == -1 && errno == EINTR);
-        if (rret <= 0)
+        while ((rret = read(sock, buf + buflen, sizeof(buf) - buflen)) == -1 && errno == EINTR);       
+        
+        if (rret < 0)
             return -1;
         prevbuflen = buflen;
         buflen += rret;
-
+       
         /* parse the request */
         num_headers = sizeof(headers) / sizeof(headers[0]);
         pret = phr_parse_request(buf, buflen, &method, &method_len, &path, &path_len,
                                  &minor_version, headers, &num_headers, prevbuflen);
-        printf("pret:%d\n", pret);
         if (pret >= 0)
         {
+            path= strtok(path," ");
 
-            // ESTOY QUITANDO ERRORES
-            // path[path_len] = '\0';
-
-            printf("path:%s", path);
-            switch (method[0])
-            {
-
-            case 'G':
+            if (method[0] == 'G'){
+                printf("GET\n");
                 response = GET(path);
-                break;
+                }
 
-            case 'P':
+            else if(method[0] == 'P'){
                 printf("POST\n");
                 response = POST();
-                break;
+                }
 
-            case 'O':
+            else if(method[0] == 'O'){
                 response = OPTIONS();
-                break;
-
-            default:
-                return EXIT_FAILURE;
             }
+
+            else return EXIT_FAILURE;
 
             msglen = strlen(response);
             strcpy(buf, "HTTP/1.1\n");
@@ -94,15 +87,12 @@ int http(int sock)
             strcat(buf, response);
 
             int a = send(sock, buf, strlen(buf), 0);
-            printf("%d\n", a);
+            printf("%d\n", minor_version);
 
-            if (minor_version == 0)
-                break;
+            /* if (minor_version == 0)
+                break; */
         }
-
-        /* request is incomplete, continue the loop */
     }
-    int i = 0;
 
     printf("request is %d bytes long\n", pret);
     printf("method is %.*s\n", (int)method_len, method);

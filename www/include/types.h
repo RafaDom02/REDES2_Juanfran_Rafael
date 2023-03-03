@@ -13,4 +13,10 @@ typedef enum
   OK
 } STATUS;
 
+typedef enum
+{
+  HTML,
+  BIN
+} OBJ;
+
 #endif

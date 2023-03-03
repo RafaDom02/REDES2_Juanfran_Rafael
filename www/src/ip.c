@@ -1,7 +1,6 @@
 #include <stdio.h>
 #include <unistd.h>
-#include <string.h> /* for strncpy */
-
+#include <string.h>
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <sys/ioctl.h>
@@ -58,6 +57,5 @@ char *getIP(char *interface)
 	{
 		return NULL;
 	}
-
 	return ip;
 }
