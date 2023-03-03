@@ -29,7 +29,7 @@ void* thread_routine(void *arg){
         }
     }
     pthread_mutex_unlock(&(tpool->mutex));
-    pthread_exit(NULL)
+    pthread_exit(NULL);
 }
 
 threadpool* threadpool_create(int num_threads){
