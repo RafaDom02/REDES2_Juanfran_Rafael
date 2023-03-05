@@ -1,2 +1,0 @@
-
-int chat(int fd);

@@ -3,7 +3,7 @@
 #include <stdlib.h>
 #include <assert.h>
 #include <string.h>
-#include "chat.h"
+#include <syslog.h>
 #include "confuse.h"
 #include "picohttpparser.h"
 #include "http.h"
@@ -61,47 +61,58 @@ int http(int sock)
         num_headers = sizeof(headers) / sizeof(headers[0]);
         pret = phr_parse_request(buf, buflen, &method, &method_len, &path, &path_len,
                                  &minor_version, headers, &num_headers, prevbuflen);
-        if (pret >= 0)
-        {
-            path= strtok(path," ");
+        
+        if(pret == -1){
+            syslog(LOG_ERR, "Error with phr_parse_request.\n");
+            return EXIT_FAILURE;
+        }
+        else if (pret == -2){
+            syslog(LOG_WARNING, "phr_parse_request request is partial.\n");
+        }
+        
 
-            if (method[0] == 'G'){
-                printf("GET\n");
-                response = GET(path);
-                }
+        path= strtok(path," ");
 
-            else if(method[0] == 'P'){
-                printf("POST\n");
-                response = POST();
-                }
-
-            else if(method[0] == 'O'){
-                response = OPTIONS();
+        if (method[0] == 'G'){
+            syslog(LOG_INFO, "GET method petition.\n");
+            response = GET(path);
             }
 
-            else return EXIT_FAILURE;
+        else if(method[0] == 'P'){
+            syslog(LOG_INFO, "POST method petition.\n");
+            response = POST();
+            }
 
-            msglen = strlen(response);
-            strcpy(buf, "HTTP/1.1\n");
-            sprintf(buf, "HTTP/1.1 200 OK\r\nContent-Type: text/html\r\nContent-Lenght: %d\r\n\r\n", msglen);
-            strcat(buf, response);
-
-            int a = send(sock, buf, strlen(buf), 0);
-            printf("%d\n", minor_version);
-
-            /* if (minor_version == 0)
-                break; */
+        else if(method[0] == 'O'){
+            syslog(LOG_INFO, "OPTIONS method petition.\n");
+            response = OPTIONS();
         }
+        else{
+            syslog(LOG_ERR, "Not valid method.\n");
+            return EXIT_FAILURE;
+        }
+
+        msglen = strlen(response);
+        strcpy(buf, "HTTP/1.1\n");
+        sprintf(buf, "HTTP/1.1 200 OK\r\nContent-Type: text/html\r\nContent-Lenght: %d\r\n\r\n", msglen);
+        strcat(buf, response);
+
+        int a = send(sock, buf, strlen(buf), 0);
+        syslog(LOG_INFO, "Minor version: %d\n", minor_version);
+
+        //if (minor_version == 0)
+        //    break;
+        
     }
 
-    printf("request is %d bytes long\n", pret);
-    printf("method is %.*s\n", (int)method_len, method);
-    printf("path is %.*s\n", (int)path_len, path);
-    printf("HTTP version is 1.%d\n", minor_version);
-    printf("headers:\n");
+    syslog(LOG_INFO, "request is %d bytes long\n", pret);
+    syslog(LOG_INFO, "method is %.*s\n", (int)method_len, method);
+    syslog(LOG_INFO, "path is %.*s\n", (int)path_len, path);
+    syslog(LOG_INFO, "HTTP version is 1.%d\n", minor_version);
+    syslog(LOG_INFO, "headers:\n");
     for (i = 0; i != num_headers; ++i)
     {
-        printf("%.*s: %.*s\n", (int)headers[i].name_len, headers[i].name,
+        syslog(LOG_INFO, "%.*s: %.*s\n", (int)headers[i].name_len, headers[i].name,
                (int)headers[i].value_len, headers[i].value);
     }
 

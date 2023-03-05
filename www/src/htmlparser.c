@@ -1,6 +1,9 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
+#include <syslog.h>
+
+#define PATH "/www/"
 
 char* html_parser(char* html){
     FILE* f;
@@ -9,10 +12,9 @@ char* html_parser(char* html){
     
     if (!html)
         return NULL;
-
     f = fopen(html, "r");
     if (!f){
-        printf("No file");
+        syslog(LOG_ERR, "No file");
         return NULL;
     }
 

@@ -44,12 +44,3 @@ ${INCLUDE}:
 	@mkdir ${INCLUDE}
 ${RESULTS}:
 	@mkdir ${RESULTS}
-
-
-${OBJDIR}/chat.o : ${SRCDIR}/chat.c ${INCLUDE}/chat.h
-	@echo "#---------------------------"
-	@echo "# Generating $@ "
-	@echo "# Depepends on $^"
-	@echo "# Has changed $<"
-	$(CC) $(CFLAGS) -o $@ -c $< $(IFLAGS)
-

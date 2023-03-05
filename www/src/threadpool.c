@@ -18,7 +18,7 @@ void* thread_routine(void *arg){
     tpool->activated_threads++;
     pthread_mutex_unlock(&(tpool->mutex));
 
-    //Lo que tenga que haccer el thread
+    //Lo que tenga que hacer el thread
 
     pthread_mutex_lock(&(tpool->mutex));
     tpool->activated_threads--;
