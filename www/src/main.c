@@ -73,21 +73,17 @@ int main(int argv, char** argc){
 
 
     ret = inet_pton(AF_INET, ip, &servaddr.sin_addr.s_addr);
-
-    if(!ret)
-    {
-        //perror("can not connect to IP.\n");
+    if(!ret){
         syslog(LOG_ERR, "Can not connect to IP.\n");
         return EXIT_FAILURE;
     }
 
     /****Asignamos una direccion IP y un PORT****/
     servaddr.sin_family = AF_INET;
-    servaddr.sin_port = htons(port);                //asignacion PORT
+    servaddr.sin_port = htons(port);
 
     /****Asignamos el socket la direccion IP y el PORT****/
     if ((bind(soc, (struct sockaddr*)&servaddr, sizeof(servaddr))) != 0) {
-        //perror("socket bind failed...\n");
         syslog(LOG_ERR, "Socket bind failure.\n");
         close(soc);
         return EXIT_FAILURE;
@@ -111,13 +107,16 @@ int main(int argv, char** argc){
     //#############################################################//
 
     //###################### UN SOLO PROCESO ######################//
-    connfd = accept(soc, (struct sockaddr*)&cli, &len);
-    if (connfd < 0) {
-        syslog(LOG_ERR, "Socket accept failure.\n");
-        return EXIT_FAILURE;
+    while(1){
+        connfd = accept(soc, (struct sockaddr*)&cli, &len);
+        if (connfd < 0) {
+            syslog(LOG_ERR, "Socket accept failure.\n");
+            close(soc);
+            return EXIT_FAILURE;
+        }
+        http(connfd);
+        close(connfd);
     }
-    http(connfd);
-    close(connfd);
     //#############################################################//
 
     close(soc);

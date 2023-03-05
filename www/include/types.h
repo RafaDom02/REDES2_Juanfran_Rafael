@@ -15,8 +15,17 @@ typedef enum
 
 typedef enum
 {
-  HTML,
-  BIN
+  _HTML,
+  _JPG,
+  _JPEG,
+  _TXT,
+  _GIF,
+  _MPG,
+  _MPEG,
+  _DOC,
+  _DOCX,
+  _PDF,
+  _NONE
 } OBJ;
 
 #endif
