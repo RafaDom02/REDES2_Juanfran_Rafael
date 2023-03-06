@@ -5,7 +5,7 @@
 
 #define PATH "/www/"
 
-char* html_parser(char* html){
+char* file_parser(const char *html, const char *mode){
     FILE* f;
     char* ret = "";
     int size_f;

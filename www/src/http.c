@@ -3,6 +3,7 @@
 #include <stdlib.h>
 #include <assert.h>
 #include <string.h>
+#include <strings.h>
 #include <syslog.h>
 #include <sys/types.h>
 #include <sys/socket.h>
@@ -10,7 +11,7 @@
 #include "picohttpparser.h"
 #include "http.h"
 #include "errno.h"
-#include "htmlparser.h"
+#include "fileparser.h"
 #include "types.h"
  
 #define MAXEXT 6
@@ -27,8 +28,6 @@
 #define DOC ".doc"
 #define DOCX ".docx"
 #define PDF ".pdf"
-
-OBJ type = _NONE;
 
 int sockt;
 
@@ -74,12 +73,11 @@ void *GET(const char *path)
     const char *extension, *filename, *response;
     if (!path) return NULL;
 
+    bzero(buf, BUFLEN);
     strcpy(buf, "HTTP/1.1\n");
 
     if (strcmp(INDEX1, path) == 0 || strcmp(INDEX2, path) == 0){
-        type = _HTML;
-        syslog(LOG_INFO, "Llego aqui\n");
-        response = html_parser("index.html");
+        response = file_parser("index.html", "r");
         msglen = strlen(response);
         sprintf(buf, "HTTP/1.1 200 OK\r\nContent-Type: text/html\r\nContent-Lenght: %d\r\n\r\n", msglen);
         strcat(buf, response);
@@ -91,18 +89,43 @@ void *GET(const char *path)
     syslog(LOG_INFO, "Extension: %s\n", extension);
     syslog(LOG_INFO, "Filename: %s\n", filename);
     syslog(LOG_INFO, "Path: %s\n", path);
-    if (strcmp(extension, JPG) == 0) type = _JPG;
-    else if (strcmp(extension, JPEG) == 0) type = _JPEG;
-    else if (strcmp(extension, TXT) == 0) type = _TXT;
-    else if (strcmp(extension, GIF) == 0) type = _GIF;
-    else if (strcmp(extension, MPG) == 0) type = _MPG;
-    else if (strcmp(extension, MPEG) == 0) type = _MPEG;
-    else if (strcmp(extension, DOC) == 0) type = _DOC;
-    else if (strcmp(extension, DOCX) == 0) type = _DOCX;
-    else if (strcmp(extension, PDF) == 0) type = _PDF;
+    response = file_parser(++path, "r");
+    msglen = strlen(response);
+    syslog(LOG_INFO, "-response->%s", response);
+    if (strcmp(extension, JPG) == 0 || strcmp(extension, JPEG) == 0){
+        syslog(LOG_INFO, "JPG/JPEG Petition\n");
+        sprintf(buf, "HTTP/1.1 200 OK\r\nContent-Type: image/jpeg\r\nContent-Lenght: %d\r\n\r\n", msglen);
+    } 
+    else if (strcmp(extension, TXT) == 0){
+        syslog(LOG_INFO, "TXT Petition\n");
+        sprintf(buf, "HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nContent-Lenght: %d\r\n\r\n", msglen);
+    }
+    else if (strcmp(extension, GIF) == 0){
+        syslog(LOG_INFO, "GIF Petition\n");
+        sprintf(buf, "HTTP/1.1 200 OK\r\nContent-Type: image/gif\r\nContent-Lenght: %d\r\n\r\n", msglen);
+    }
+    else if (strcmp(extension, MPG) == 0 || strcmp(extension, MPEG) == 0){
+        syslog(LOG_INFO, "MPG/MPEG Petition\n");
+        sprintf(buf, "HTTP/1.1 200 OK\r\nContent-Type: video/mpeg\r\nContent-Lenght: %d\r\n\r\n", msglen);
+    }
+    else if (strcmp(extension, DOC) == 0){
+        syslog(LOG_INFO, "DOC Petition\n");
+        sprintf(buf, "HTTP/1.1 200 OK\r\nContent-Type: application/msword\r\nContent-Lenght: %d\r\n\r\n", msglen);
+    }
+    else if (strcmp(extension, DOCX) == 0){
+        syslog(LOG_INFO, "DOCX Petition\n");
+        sprintf(buf, "HTTP/1.1 200 OK\r\nContent-Type: application/vnd.openxmlformats-officedocument."
+                     "wordprocessingml.document\r\nContent-Lenght: %d\r\n\r\n", msglen);
+    }
+    else if (strcmp(extension, PDF) == 0){
+        syslog(LOG_INFO, "PDF Petition\n");
+        sprintf(buf, "HTTP/1.1 200 OK\r\nContent-Type: application/pdf\r\nContent-Lenght: %d\r\n\r\n", msglen);
+    }
     else return NULL;
-    
-    return html_parser(++path);
+
+    send(sockt, buf, strlen(buf), 0);
+
+    return NULL;
 }
 
 char *POST()
