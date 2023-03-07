@@ -5,10 +5,10 @@
 
 #define PATH "/www/"
 
-char* file_parser(const char *html, const char *mode){
+void* file_parser(const char *html, const char *mode, int* size_file){
     FILE* f;
     char* ret = "";
-    int size_f;
+    
     
     if (!html)
         return NULL;
@@ -20,9 +20,11 @@ char* file_parser(const char *html, const char *mode){
 
 
     fseek(f, 0, SEEK_END);
-    size_f = ftell(f);
+    *size_file = ftell(f);
     fseek(f, 0, SEEK_SET);  /* same as rewind(f); */
-    ret = (char*)malloc(size_f*sizeof(char));
+    ret = (char*)malloc(*size_file*sizeof(char));
+
+    syslog(LOG_INFO, "%s SIZE::::: %d\n", (char*)ret,*size_file);
     
     if (!ret){
         
@@ -30,12 +32,13 @@ char* file_parser(const char *html, const char *mode){
         return NULL;
     }
 
-    if(fread(ret, 1, size_f, f) == 0){
+    if(fread(ret, 1, *size_file, f) == 0){
         fclose(f);
         return NULL;
     }
     
     fclose(f);
-    ret[size_f-1] = '\0';
+    ret[*size_file-1] = '\0';
+
     return ret;
 }

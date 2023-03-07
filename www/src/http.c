@@ -68,19 +68,19 @@ const char* get_file(const char *path, const char *ext){
 
 void *GET(const char *path)
 {
-    int msglen;
+    int msglen, size_total;
     char buf[BUFLEN];
-    const char *extension, *filename, *response;
+    const void *extension, *filename, *response, *total;
     if (!path) return NULL;
 
     bzero(buf, BUFLEN);
     strcpy(buf, "HTTP/1.1\n");
 
     if (strcmp(INDEX1, path) == 0 || strcmp(INDEX2, path) == 0){
-        response = file_parser("index.html", "r");
-        msglen = strlen(response);
+        response = file_parser("index.html", "r", &msglen);
+       
         sprintf(buf, "HTTP/1.1 200 OK\r\nContent-Type: text/html\r\nContent-Lenght: %d\r\n\r\n", msglen);
-        strcat(buf, response);
+        strcat(buf, (char*)response);
         send(sockt, buf, strlen(buf), 0);
         return NULL;
     }
@@ -89,8 +89,8 @@ void *GET(const char *path)
     syslog(LOG_INFO, "Extension: %s\n", extension);
     syslog(LOG_INFO, "Filename: %s\n", filename);
     syslog(LOG_INFO, "Path: %s\n", path);
-    response = file_parser(++path, "r");
-    msglen = strlen(response);
+    response = file_parser(++path, "rb", &msglen);
+   
     syslog(LOG_INFO, "-response->%s", response);
     if (strcmp(extension, JPG) == 0 || strcmp(extension, JPEG) == 0){
         syslog(LOG_INFO, "JPG/JPEG Petition\n");
@@ -122,8 +122,19 @@ void *GET(const char *path)
         sprintf(buf, "HTTP/1.1 200 OK\r\nContent-Type: application/pdf\r\nContent-Lenght: %d\r\n\r\n", msglen);
     }
     else return NULL;
+    //buf es la cabecera y response es el binario, por que no vaaaa?
+    
+    size_total = strlen(buf) + msglen;
+    syslog(LOG_INFO, "%d = %d + %d", size_total, strlen(buf), msglen);
+    
+    total = malloc(size_total*sizeof(void));
 
-    send(sockt, buf, strlen(buf), 0);
+    memcpy(total, buf, strlen(buf));
+    memcpy(total + strlen(buf), response, msglen);
+
+    send(sockt, total, size_total, 0);
+    syslog(LOG_INFO, "AAAAAAAAAAAAAAAAAAAAAAAAAAA%x || %d\n", total, size_total);
+    
 
     return NULL;
 }
