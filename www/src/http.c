@@ -19,6 +19,7 @@
 #define BUFLEN 10000
 #define INDEX2 "/"
 #define INDEX1 "/index.html"
+#define PYTHON ""
 #define JPG ".jpg"
 #define JPEG ".jpeg"
 #define TXT ".txt"
@@ -28,6 +29,8 @@
 #define DOC ".doc"
 #define DOCX ".docx"
 #define PDF ".pdf"
+#define PY ".py"
+#define PHP ".php"
 
 int sockt;
 
@@ -65,6 +68,34 @@ const char* get_file(const char *path, const char *ext){
     if(s[0] == '/') return ++s;             //Eliminamos la barra del directorio si ha acabado el for-loop por la barra
     return NULL;
 }
+
+const char** get_params(char* extension){
+    if(!extension) return NULL;
+
+    char delim[] = "=";
+    char **output;
+    char *aux;
+    char* token;
+    int size = 0;
+    
+
+    aux = strtok(extension, delim);
+    aux = strtok(extension, delim);
+
+    token = strtok(aux, "+");
+
+    while (aux != NULL){
+        output = (char**)realloc(output, size+1);
+        size++;
+        output[size-1] = (char*)malloc(30*sizeof(char));
+        strcpy(output[size-1],token);
+        token = strtok(aux, NULL);
+
+    }    
+    
+    return output;
+}
+
 
 void *GET(const char *path)
 {
@@ -139,8 +170,58 @@ void *GET(const char *path)
     return NULL;
 }
 
-char *POST()
+char *POST(const char* path)
 {
+    char * extension;
+    int msglen = 0;
+
+    extension = get_extension(path);
+    FILE *fp;
+    char out[BUFLEN];
+    char buf[BUFLEN] = "";
+    char comm[BUFLEN] = "/usr/bin/php .";
+    char header[BUFLEN] = "";
+    
+    if (strcmp(extension, PY)==0){
+        strcpy(comm, "/usr/bin/python3 .");
+    }
+        
+
+    /* Open the command for reading. */
+    
+    strcat(comm, path);
+    fp = popen(comm, "rw");
+    if (fp == NULL) {
+        printf("Failed to run command\n" );
+        exit(1);
+    }
+
+    
+
+    //sprintf(buf, "HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nContent-Lenght: %d\r\n\r\n", msglen);
+
+    /* Read the output a line at a time - output it. */
+        while (fgets(out, sizeof(out), fp) != NULL) {
+        
+        strcat(buf, out);
+        
+    
+    }
+
+    msglen = strlen(buf);
+
+    sprintf(header, "HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nContent-Lenght: %d\r\n\r\n", msglen);
+    
+    msglen += strlen(header);
+
+    strcat(header, buf);
+    send(sockt, header, msglen,0);
+
+    /* close */
+    pclose(fp);
+    
+    
+
     return NULL;
 }
 
@@ -194,7 +275,7 @@ int http(int sock)
 
     else if(method[0] == 'P'){
         syslog(LOG_INFO, "POST method petition.\n");
-        response = POST();
+        response = POST(path);
         }
 
     else if(method[0] == 'O'){
@@ -215,7 +296,7 @@ int http(int sock)
     syslog(LOG_INFO, "headers:\n");
     for (i = 0; i != num_headers; ++i)
     {
-        syslog(LOG_INFO, "%.*s: %.*s\n", (int)headers[i].name_len, headers[i].name,
+        syslog(LOG_INFO, "\t%.*s: %.*s\n", (int)headers[i].name_len, headers[i].name,
                (int)headers[i].value_len, headers[i].value);
     }
 
