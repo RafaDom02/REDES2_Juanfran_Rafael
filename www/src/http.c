@@ -31,6 +31,7 @@
 #define PDF ".pdf"
 #define PY ".py"
 #define PHP ".php"
+#define ICO ".ico"
 #define OPTIONS_HEADER "HTTP/1.1 200 OK\r\nAllow: %s\r\nContent-Length: 0\r\n\r\n"
 #define HTML_HEADER "HTTP/1.1 200 OK\r\nContent-Type: text/html\r\nContent-Lenght: %d\r\n\r\n"
 #define IMAGE_HEADER "HTTP/1.1 200 OK\r\nContent-Type: image/jpeg\r\nContent-Lenght: %d\r\n\r\n"
@@ -40,6 +41,7 @@
 #define DOC_HEADER "HTTP/1.1 200 OK\r\nContent-Type: application/msword\r\nContent-Lenght: %d\r\n\r\n"
 #define DOCX_HEADER "HTTP/1.1 200 OK\r\nContent-Type: application/vnd.openxmlformats-officedocument.wordprocessingml.document\r\nContent-Lenght: %d\r\n\r\n"
 #define PDF_HEADER "HTTP/1.1 200 OK\r\nContent-Type: application/pdf\r\nContent-Lenght: %d\r\n\r\n"
+#define ICO_HEADER "HTTP/1.1 200 OK\r\nContent-Type: image/x-icon\r\nContent-Length: %d\r\n\r\n"
 
 int connfd;
 
@@ -119,7 +121,7 @@ STATUS GET(const char *path)
 
     if (strcmp(INDEX1, path) == 0 || strcmp(INDEX2, path) == 0){
         syslog(LOG_INFO, "HTML Petition.\n");
-        response = file_parser("index.html", "r", &msglen);
+        response = file_parser("media/html/index.html", "r", &msglen);
         sprintf(buf, HTML_HEADER, msglen);
         strcat(buf, (char*)response);
         send(connfd, buf, strlen(buf), 0);
@@ -163,6 +165,10 @@ STATUS GET(const char *path)
     else if (strcmp(extension, PDF) == 0){
         syslog(LOG_INFO, "PDF Petition.\n");
         sprintf(buf, PDF_HEADER, msglen);
+    }
+    else if (strcmp(extension, ICO) == 0){
+        syslog(LOG_INFO, "ICO Petition.\n");
+        sprintf(buf, ICO_HEADER, msglen);
     }
     else return ERROR;
     //buf es la cabecera y response es el binario, por que no vaaaa?
