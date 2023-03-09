@@ -31,8 +31,17 @@
 #define PDF ".pdf"
 #define PY ".py"
 #define PHP ".php"
+#define OPTIONS_HEADER "HTTP/1.1 200 OK\r\nAllow: %s\r\nContent-Length: 0\r\n\r\n"
+#define HTML_HEADER "HTTP/1.1 200 OK\r\nContent-Type: text/html\r\nContent-Lenght: %d\r\n\r\n"
+#define IMAGE_HEADER "HTTP/1.1 200 OK\r\nContent-Type: image/jpeg\r\nContent-Lenght: %d\r\n\r\n"
+#define TXT_HEADER "HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nContent-Lenght: %d\r\n\r\n"
+#define GIF_HEADER "HTTP/1.1 200 OK\r\nContent-Type: image/gif\r\nContent-Lenght: %d\r\n\r\n"
+#define VIDEO_HEADER "HTTP/1.1 200 OK\r\nContent-Type: video/mpeg\r\nContent-Lenght: %d\r\n\r\n"
+#define DOC_HEADER "HTTP/1.1 200 OK\r\nContent-Type: application/msword\r\nContent-Lenght: %d\r\n\r\n"
+#define DOCX_HEADER "HTTP/1.1 200 OK\r\nContent-Type: application/vnd.openxmlformats-officedocument.wordprocessingml.document\r\nContent-Lenght: %d\r\n\r\n"
+#define PDF_HEADER "HTTP/1.1 200 OK\r\nContent-Type: application/pdf\r\nContent-Lenght: %d\r\n\r\n"
 
-int sockt;
+int connfd;
 
 /**
  * @brief Get the extension of a file
@@ -97,80 +106,80 @@ const char** get_params(char* extension){
 }
 
 
-void *GET(const char *path)
+STATUS GET(const char *path)
 {
     int msglen, size_total;
     char buf[BUFLEN];
-    const void *extension, *filename, *response, *total;
-    if (!path) return NULL;
+    const char *extension, *filename;
+    const void *response, *total;
+    if (!path) return ERROR;
 
     bzero(buf, BUFLEN);
     strcpy(buf, "HTTP/1.1\n");
 
     if (strcmp(INDEX1, path) == 0 || strcmp(INDEX2, path) == 0){
+        syslog(LOG_INFO, "HTML Petition.\n");
         response = file_parser("index.html", "r", &msglen);
-       
-        sprintf(buf, "HTTP/1.1 200 OK\r\nContent-Type: text/html\r\nContent-Lenght: %d\r\n\r\n", msglen);
+        sprintf(buf, HTML_HEADER, msglen);
         strcat(buf, (char*)response);
-        send(sockt, buf, strlen(buf), 0);
-        return NULL;
+        send(connfd, buf, strlen(buf), 0);
+        return ERROR;
     }
     extension = get_extension(path);
     filename = get_file(path, extension);
+    if(strcmp(extension, TXT) == 0)
+        response = file_parser(++path, "r", &msglen);
+    else response = file_parser(++path, "rb", &msglen);
+
     syslog(LOG_INFO, "Extension: %s\n", extension);
     syslog(LOG_INFO, "Filename: %s\n", filename);
     syslog(LOG_INFO, "Path: %s\n", path);
-    response = file_parser(++path, "rb", &msglen);
-   
-    syslog(LOG_INFO, "-response->%s", response);
+    syslog(LOG_INFO, "Response: %s\n", (char*)response);
+
     if (strcmp(extension, JPG) == 0 || strcmp(extension, JPEG) == 0){
-        syslog(LOG_INFO, "JPG/JPEG Petition\n");
-        sprintf(buf, "HTTP/1.1 200 OK\r\nContent-Type: image/jpeg\r\nContent-Lenght: %d\r\n\r\n", msglen);
-    } 
+        syslog(LOG_INFO, "JPG/JPEG Petition.\n");
+        sprintf(buf, IMAGE_HEADER, msglen);
+    }
     else if (strcmp(extension, TXT) == 0){
-        syslog(LOG_INFO, "TXT Petition\n");
-        sprintf(buf, "HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nContent-Lenght: %d\r\n\r\n", msglen);
+        syslog(LOG_INFO, "TXT Petition.\n");
+        sprintf(buf, TXT_HEADER, msglen);
     }
     else if (strcmp(extension, GIF) == 0){
-        syslog(LOG_INFO, "GIF Petition\n");
-        sprintf(buf, "HTTP/1.1 200 OK\r\nContent-Type: image/gif\r\nContent-Lenght: %d\r\n\r\n", msglen);
+        syslog(LOG_INFO, "GIF Petition.\n");
+        sprintf(buf, GIF_HEADER, msglen);
     }
     else if (strcmp(extension, MPG) == 0 || strcmp(extension, MPEG) == 0){
-        syslog(LOG_INFO, "MPG/MPEG Petition\n");
-        sprintf(buf, "HTTP/1.1 200 OK\r\nContent-Type: video/mpeg\r\nContent-Lenght: %d\r\n\r\n", msglen);
+        syslog(LOG_INFO, "MPG/MPEG Petition.\n");
+        sprintf(buf, VIDEO_HEADER, msglen);
     }
     else if (strcmp(extension, DOC) == 0){
-        syslog(LOG_INFO, "DOC Petition\n");
-        sprintf(buf, "HTTP/1.1 200 OK\r\nContent-Type: application/msword\r\nContent-Lenght: %d\r\n\r\n", msglen);
+        syslog(LOG_INFO, "DOC Petition.\n");
+        sprintf(buf, DOC_HEADER, msglen);
     }
     else if (strcmp(extension, DOCX) == 0){
-        syslog(LOG_INFO, "DOCX Petition\n");
-        sprintf(buf, "HTTP/1.1 200 OK\r\nContent-Type: application/vnd.openxmlformats-officedocument."
-                     "wordprocessingml.document\r\nContent-Lenght: %d\r\n\r\n", msglen);
+        syslog(LOG_INFO, "DOCX Petition.\n");
+        sprintf(buf, DOCX_HEADER, msglen);
     }
     else if (strcmp(extension, PDF) == 0){
-        syslog(LOG_INFO, "PDF Petition\n");
-        sprintf(buf, "HTTP/1.1 200 OK\r\nContent-Type: application/pdf\r\nContent-Lenght: %d\r\n\r\n", msglen);
+        syslog(LOG_INFO, "PDF Petition.\n");
+        sprintf(buf, PDF_HEADER, msglen);
     }
-    else return NULL;
+    else return ERROR;
     //buf es la cabecera y response es el binario, por que no vaaaa?
     
     size_total = strlen(buf) + msglen;
-    syslog(LOG_INFO, "%d = %d + %d", size_total, strlen(buf), msglen);
+    syslog(LOG_INFO, "%d = %ld + %d\n", size_total, strlen(buf), msglen);
     
     total = malloc(size_total*sizeof(void));
 
     memcpy(total, buf, strlen(buf));
     memcpy(total + strlen(buf), response, msglen);
 
-    send(sockt, total, size_total, 0);
-    syslog(LOG_INFO, "AAAAAAAAAAAAAAAAAAAAAAAAAAA%x || %d\n", total, size_total);
-    
-
-    return NULL;
+    send(connfd, total, size_total, 0);
+    return OK;
 }
 
-char *POST(const char* path)
+STATUS POST(const char* path)
 {
     char * extension;
     int msglen = 0;
@@ -190,61 +199,58 @@ char *POST(const char* path)
     /* Open the command for reading. */
     
     strcat(comm, path);
-    fp = popen(comm, "rw");
+    fp = popen(comm, "r");
     if (fp == NULL) {
         printf("Failed to run command\n" );
         exit(1);
     }
 
-    
-
-    //sprintf(buf, "HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nContent-Lenght: %d\r\n\r\n", msglen);
-
     /* Read the output a line at a time - output it. */
-        while (fgets(out, sizeof(out), fp) != NULL) {
-        
+    while (fgets(out, sizeof(out), fp) != NULL) {
         strcat(buf, out);
-        
-    
     }
 
     msglen = strlen(buf);
 
-    sprintf(header, "HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nContent-Lenght: %d\r\n\r\n", msglen);
+    sprintf(header, TXT_HEADER, msglen);
     
     msglen += strlen(header);
 
     strcat(header, buf);
-    send(sockt, header, msglen,0);
+    send(connfd, header, msglen,0);
 
-    /* close */
     pclose(fp);
-    
-    
-
-    return NULL;
+    return OK;
 }
 
-char *OPTIONS()
+STATUS OPTIONS()
 {
-    return NULL;
+    char buf[BUFLEN];
+    const char *allowed_methods = "GET, POST, OPTIONS";
+    int len;
+
+    bzero(buf, BUFLEN);
+
+    len = snprintf(buf, BUFLEN, OPTIONS_HEADER, allowed_methods);
+    send(connfd, buf, len, 0);
+    return OK;
 }
 
-int http(int sock)
+int http(int fd)
 {
-    char buf[10000];
+    char buf[BUFLEN];
     const char *method, *path;
     int pret, minor_version, msglen = 0, i;
-    struct phr_header headers[100];
+    struct phr_header headers[MAXPATH];
     size_t buflen = 0, prevbuflen = 0, method_len, path_len, num_headers;
     ssize_t rret;
     char *response;
 
-    sockt = sock;
+    connfd = fd;
     while (1)
     {
         /* read the request */
-        while ((rret = read(sock, buf + buflen, sizeof(buf) - buflen)) == -1 && errno == EINTR);       
+        while ((rret = read(connfd, buf + buflen, sizeof(buf) - buflen)) == -1 && errno == EINTR);       
         
         if (rret < 0)
             return -1;
@@ -270,18 +276,34 @@ int http(int sock)
 
     if (method[0] == 'G'){
         syslog(LOG_INFO, "GET method petition.\n");
-        response = GET(path);
+        if(GET(path) == ERROR)
+        {
+            syslog(LOG_ERR, "GET method failure.\n");
+            return EXIT_FAILURE;
         }
+        else syslog(LOG_INFO, "GET method success.\n");
+    }
 
     else if(method[0] == 'P'){
         syslog(LOG_INFO, "POST method petition.\n");
-        response = POST(path);
+        if(POST(path) == ERROR)
+        {
+            syslog(LOG_ERR, "POST method failure.\n");
+            return EXIT_FAILURE;
         }
+        else syslog(LOG_INFO, "POST method success.\n");
+    }
 
     else if(method[0] == 'O'){
         syslog(LOG_INFO, "OPTIONS method petition.\n");
-        response = OPTIONS();
+        if(OPTIONS() == ERROR)
+        {
+            syslog(LOG_ERR, "OPTIONS method failure.\n");
+            return EXIT_FAILURE;
+        }
+        else syslog(LOG_INFO, "OPTIONS method success.\n");
     }
+
     else{
         syslog(LOG_ERR, "Not valid method.\n");
         return EXIT_FAILURE;

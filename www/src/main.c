@@ -10,6 +10,7 @@
 #include <syslog.h>
 #include <fcntl.h>
 #include <string.h>
+#include <strings.h>
 #include "confuse.h"
 #include "ip.h"
 #include "http.h"
@@ -45,10 +46,13 @@ int main(int argv, char** argc){
     cfg_t* conf = NULL;
    
     system("clear");//Limpiamos la terminal 
+
     conf = get_conf();
+
     ip = cfg_getstr(conf, "ip");
     if(strcmp(ip,"Default") == 0) ip = getIP(cfg_getstr(conf,"interface"));
     printf("IP:%s\n",ip);
+
     //Demonizamos el proceso
     if(to_demonize()) return EXIT_FAILURE;  //Creo que funciona pero no estoy seguro.
 
@@ -56,6 +60,7 @@ int main(int argv, char** argc){
     //Creamos el "dict" con la información del .conf
 
     tp = threadpool_create(cfg_getint(conf, "n_threads"));  //Creación threadpool
+    syslog(LOG_INFO, "Threadpool created.\n");
 
     /****Creacion de socket****/
     soc = socket(AF_INET, SOCK_STREAM, 0);
@@ -63,6 +68,7 @@ int main(int argv, char** argc){
         syslog(LOG_ERR, "Socket creation failed.\n");
         return EXIT_FAILURE;
     }
+    else syslog(LOG_INFO, "Socket successfully created...\n");
 
     //En caso de que llegue un SIGINT cerramos el socket
     if (signal(SIGINT, sigint_handler) == SIG_ERR){
@@ -79,22 +85,26 @@ int main(int argv, char** argc){
     }
 
     /****Asignamos una direccion IP y un PORT****/
+    bzero(&servaddr, sizeof(servaddr));
     servaddr.sin_family = AF_INET;
     servaddr.sin_port = htons(port);
+    servaddr.sin_addr.s_addr = INADDR_ANY;
 
     /****Asignamos el socket la direccion IP y el PORT****/
     if ((bind(soc, (struct sockaddr*)&servaddr, sizeof(servaddr))) != 0) {
         syslog(LOG_ERR, "Socket bind failure.\n");
         close(soc);
+        threadpool_destroy(tp);
         return EXIT_FAILURE;
     }
     else
         syslog(LOG_INFO, "Socket successfully binded..\n");   
     
     /****El servidor espera un paquete****/
-     if ((listen(soc, 5)) != 0) {
+     if ((listen(soc, 100)) != 0) {
         syslog(LOG_ERR, "Socket listen failure.\n");
         close(soc);
+        threadpool_destroy(tp);
         return EXIT_FAILURE;
     }
     else
@@ -120,6 +130,7 @@ int main(int argv, char** argc){
     //#############################################################//
 
     close(soc);
+    threadpool_destroy(tp);
     syslog(LOG_INFO, "Finishing program.\n");
     return EXIT_SUCCESS;
 }

@@ -23,8 +23,6 @@ void* file_parser(const char *html, const char *mode, int* size_file){
     *size_file = ftell(f);
     fseek(f, 0, SEEK_SET);  /* same as rewind(f); */
     ret = (char*)malloc(*size_file*sizeof(char));
-
-    syslog(LOG_INFO, "%s SIZE::::: %d\n", (char*)ret,*size_file);
     
     if (!ret){
         

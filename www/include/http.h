@@ -2,6 +2,6 @@
 #define _HTTP_H
 
 
-int http(int sock);
+int http(int fd);
 
 #endif
