@@ -6,6 +6,7 @@
 #include <arpa/inet.h>
 #include <sys/types.h>
 #include <sys/stat.h>
+#include <sys/wait.h>
 #include <signal.h>
 #include <syslog.h>
 #include <fcntl.h>
@@ -14,6 +15,7 @@
 #include "confuse.h"
 #include "ip.h"
 #include "http.h"
+#include "types.h"
 #include "conf.h"
 #include "threadpool.h"
 
@@ -117,15 +119,22 @@ int main(int argv, char** argc){
     //#############################################################//
 
     //###################### UN SOLO PROCESO ######################//
-    while(1){
-        connfd = accept(soc, (struct sockaddr*)&cli, &len);
-        if (connfd < 0) {
-            syslog(LOG_ERR, "Socket accept failure.\n");
-            close(soc);
-            return EXIT_FAILURE;
+    BOOL father = FALSE;
+    if(fork()) if(fork()) if(fork()) if(fork()) if(fork()) father = TRUE;
+
+    if(father == TRUE) for(i=0; i<5; i++) wait(NULL);
+    else {
+        while(1){
+            connfd = accept(soc, (struct sockaddr*)&cli, &len);
+            if (connfd < 0) {
+                syslog(LOG_ERR, "Socket accept failure.\n");
+                close(soc);
+                return EXIT_FAILURE;
+            }
+            if(http(connfd) == EXIT_FAILURE);
+            close(connfd);
         }
-        http(connfd);
-        close(connfd);
+        return EXIT_SUCCESS;
     }
     //#############################################################//
 

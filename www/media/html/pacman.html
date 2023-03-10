@@ -2,7 +2,7 @@
 <html>
 <head>
 	<title>Pacman</title>
-    <h1><span style="color: #ffffff; text-align: center;">Maintenance</span></h1>
+    <h1><span style="color: #e0ad21; text-align: center;">Pacman</span></h1>
 	<link rel="stylesheet" type="text/css" href="https://fonts.googleapis.com/css?family=VT323">
 	<style type="text/css">
 		*{
@@ -845,7 +845,7 @@ var PACMAN = (function () {
 
     function drawScore(text, position) {
         ctx.fillStyle = "#FFFFFF";
-        ctx.font      = "12px BDCartoonShoutRegular";
+        ctx.font      = "12px VT323";
         ctx.fillText(text, 
                      (position["new"]["x"] / 10) * map.blockSize, 
                      ((position["new"]["y"] + 5) / 10) * map.blockSize);
@@ -853,7 +853,7 @@ var PACMAN = (function () {
     
     function dialog(text) {
         ctx.fillStyle = "#FFFF00";
-        ctx.font      = "18px Calibri";
+        ctx.font      = "18px VT323";  /*MIRAR ESTOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOO*/
         var width = ctx.measureText(text).width,
             x     = ((map.width * map.blockSize) - width) / 2;        
         ctx.fillText(text, x, (map.height * 10) + 8);
@@ -945,14 +945,14 @@ var PACMAN = (function () {
         }
 
         ctx.fillStyle = !soundDisabled() ? "#00FF00" : "#FF0000";
-        ctx.font = "bold 16px sans-serif";
+        ctx.font = "bold 20px VT323";
         //ctx.fillText("♪", 10, textBase);
         ctx.fillText("s", 10, textBase);
 
         ctx.fillStyle = "#FFFF00";
-        ctx.font      = "14px Calibri";
+        ctx.font      = "20px VT323";
         ctx.fillText("Score: " + user.theScore(), 30, textBase);
-        ctx.fillText("Level: " + level, 260, textBase);
+        ctx.fillText("Nivel: " + level, 260, textBase);
     }
 
     function redrawBlock(pos) {

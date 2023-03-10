@@ -19,7 +19,7 @@
 #define BUFLEN 10000
 #define INDEX2 "/"
 #define INDEX1 "/index.html"
-#define PYTHON ""
+#define HTML ".html"
 #define JPG ".jpg"
 #define JPEG ".jpeg"
 #define TXT ".txt"
@@ -129,22 +129,24 @@ STATUS GET(const char *path)
     }
     extension = get_extension(path);
     filename = get_file(path, extension);
-    if(strcmp(extension, TXT) == 0)
-        response = file_parser(++path, "r", &msglen);
-    else response = file_parser(++path, "rb", &msglen);
+    response = file_parser(++path, "rb", &msglen);
 
     syslog(LOG_INFO, "Extension: %s\n", extension);
     syslog(LOG_INFO, "Filename: %s\n", filename);
     syslog(LOG_INFO, "Path: %s\n", path);
     syslog(LOG_INFO, "Response: %s\n", (char*)response);
 
-    if (strcmp(extension, JPG) == 0 || strcmp(extension, JPEG) == 0){
+    if (strcmp(extension, HTML) == 0){
+        syslog(LOG_INFO, "JPG/JPEG Petition.\n");
+        sprintf(buf, HTML_HEADER, msglen);
+    }
+    else if (strcmp(extension, JPG) == 0 || strcmp(extension, JPEG) == 0){
         syslog(LOG_INFO, "JPG/JPEG Petition.\n");
         sprintf(buf, IMAGE_HEADER, msglen);
     }
     else if (strcmp(extension, TXT) == 0){
         syslog(LOG_INFO, "TXT Petition.\n");
-        sprintf(buf, TXT_HEADER, msglen);
+        sprintf(buf, TXT_HEADER, --msglen);
     }
     else if (strcmp(extension, GIF) == 0){
         syslog(LOG_INFO, "GIF Petition.\n");
