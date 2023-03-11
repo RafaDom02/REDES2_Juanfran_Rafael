@@ -184,6 +184,7 @@ int main(int argv, char** argc){
 void sigint_handler(){
     int i;
     if(father == TRUE){
+        for(i=0; i<nchilds; i++) kill(childs[i], SIGINT);
         for(i=0; i<nchilds; i++) wait(NULL);
         close(soc);
         free(childs);

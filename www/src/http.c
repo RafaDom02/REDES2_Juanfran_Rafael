@@ -103,7 +103,7 @@ STATUS GET(const char *path)
         sprintf(buf, HTML_HEADER, OK200, msglen);
         strcat(buf, (char*)response);
         send(connfd, buf, strlen(buf), 0);
-        return ERROR;
+        return OK;
     }
 
     syslog(LOG_INFO, "Path: %s\n", path);
