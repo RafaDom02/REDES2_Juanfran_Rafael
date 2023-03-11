@@ -13,35 +13,13 @@
 #include "errno.h"
 #include "fileparser.h"
 #include "types.h"
+#include <netinet/in.h>
+#include <netdb.h>
  
 #define MAXEXT 6
 #define MAXPATH 200
 #define BUFLEN 10000
-#define INDEX2 "/"
-#define INDEX1 "/index.html"
-#define HTML ".html"
-#define JPG ".jpg"
-#define JPEG ".jpeg"
-#define TXT ".txt"
-#define GIF ".gif"
-#define MPG ".mpg"
-#define MPEG ".mpeg"
-#define DOC ".doc"
-#define DOCX ".docx"
-#define PDF ".pdf"
-#define PY ".py"
-#define PHP ".php"
-#define ICO ".ico"
-#define OPTIONS_HEADER "HTTP/1.1 200 OK\r\nAllow: %s\r\nContent-Length: 0\r\n\r\n"
-#define HTML_HEADER "HTTP/1.1 200 OK\r\nContent-Type: text/html\r\nContent-Lenght: %d\r\n\r\n"
-#define IMAGE_HEADER "HTTP/1.1 200 OK\r\nContent-Type: image/jpeg\r\nContent-Lenght: %d\r\n\r\n"
-#define TXT_HEADER "HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nContent-Lenght: %d\r\n\r\n"
-#define GIF_HEADER "HTTP/1.1 200 OK\r\nContent-Type: image/gif\r\nContent-Lenght: %d\r\n\r\n"
-#define VIDEO_HEADER "HTTP/1.1 200 OK\r\nContent-Type: video/mpeg\r\nContent-Lenght: %d\r\n\r\n"
-#define DOC_HEADER "HTTP/1.1 200 OK\r\nContent-Type: application/msword\r\nContent-Lenght: %d\r\n\r\n"
-#define DOCX_HEADER "HTTP/1.1 200 OK\r\nContent-Type: application/vnd.openxmlformats-officedocument.wordprocessingml.document\r\nContent-Lenght: %d\r\n\r\n"
-#define PDF_HEADER "HTTP/1.1 200 OK\r\nContent-Type: application/pdf\r\nContent-Lenght: %d\r\n\r\n"
-#define ICO_HEADER "HTTP/1.1 200 OK\r\nContent-Type: image/x-icon\r\nContent-Length: %d\r\n\r\n"
+
 
 int connfd;
 
@@ -80,7 +58,7 @@ const char* get_file(const char *path, const char *ext){
     return NULL;
 }
 
-const char** get_params(char* extension){
+char** get_params(char* extension){
     if(!extension) return NULL;
 
     char delim[] = "=";
@@ -122,55 +100,79 @@ STATUS GET(const char *path)
     if (strcmp(INDEX1, path) == 0 || strcmp(INDEX2, path) == 0){
         syslog(LOG_INFO, "HTML Petition.\n");
         response = file_parser("media/html/index.html", "r", &msglen);
-        sprintf(buf, HTML_HEADER, msglen);
+        sprintf(buf, HTML_HEADER, OK200, msglen);
         strcat(buf, (char*)response);
         send(connfd, buf, strlen(buf), 0);
         return ERROR;
     }
-    extension = get_extension(path);
-    filename = get_file(path, extension);
-    response = file_parser(++path, "rb", &msglen);
 
-    syslog(LOG_INFO, "Extension: %s\n", extension);
-    syslog(LOG_INFO, "Filename: %s\n", filename);
     syslog(LOG_INFO, "Path: %s\n", path);
-    syslog(LOG_INFO, "Response: %s\n", (char*)response);
-
+    extension = get_extension(path);
+    syslog(LOG_INFO, "Extension: %s\n", extension);
+    filename = get_file(path, extension);
+    syslog(LOG_INFO, "Filename: %s\n", filename);
+    response = file_parser(++path, "rb", &msglen);
+    if(!response){
+        syslog(LOG_INFO, "Response: No response\n");
+        response = file_parser("media/html/error/e404.html", "r", &msglen);
+        sprintf(buf, HTML_HEADER, ERROR404, msglen);
+        strcat(buf, (char*)response);
+        send(connfd, buf, strlen(buf), 0);
+        return OK;
+    }
+    else
+        syslog(LOG_INFO, "Response: %s\n", (char*)response);
     if (strcmp(extension, HTML) == 0){
-        syslog(LOG_INFO, "JPG/JPEG Petition.\n");
-        sprintf(buf, HTML_HEADER, msglen);
+        syslog(LOG_INFO, "HTML Petition.\n");
+        sprintf(buf, HTML_HEADER, OK200, msglen);
     }
     else if (strcmp(extension, JPG) == 0 || strcmp(extension, JPEG) == 0){
         syslog(LOG_INFO, "JPG/JPEG Petition.\n");
-        sprintf(buf, IMAGE_HEADER, msglen);
+        sprintf(buf, JPG_HEADER, OK200, msglen);
+    }
+    else if (strcmp(extension, PNG) == 0){
+        syslog(LOG_INFO, "PNG Petition.\n");
+        sprintf(buf, PNG_HEADER, OK200, msglen);
+    }
+    else if (strcmp(extension, JS) == 0){
+        syslog(LOG_INFO, "JS Petition.\n");
+        sprintf(buf, JS_HEADER, OK200, msglen);
+    }
+    else if (strcmp(extension, CSS) == 0){
+        syslog(LOG_INFO, "CSS Petition.\n");
+        sprintf(buf, CSS_HEADER, OK200, msglen);
+    }
+    else if (strcmp(extension, SVG) == 0){
+        syslog(LOG_INFO, "SVG Petition.\n");
+        sprintf(buf, SVG_HEADER, OK200, msglen);
     }
     else if (strcmp(extension, TXT) == 0){
         syslog(LOG_INFO, "TXT Petition.\n");
-        sprintf(buf, TXT_HEADER, --msglen);
+        sprintf(buf, TXT_HEADER, OK200, --msglen);
     }
     else if (strcmp(extension, GIF) == 0){
         syslog(LOG_INFO, "GIF Petition.\n");
-        sprintf(buf, GIF_HEADER, msglen);
+        sprintf(buf, GIF_HEADER, OK200, msglen);
     }
     else if (strcmp(extension, MPG) == 0 || strcmp(extension, MPEG) == 0){
         syslog(LOG_INFO, "MPG/MPEG Petition.\n");
-        sprintf(buf, VIDEO_HEADER, msglen);
+        sprintf(buf, VIDEO_HEADER, OK200, msglen);
     }
     else if (strcmp(extension, DOC) == 0){
         syslog(LOG_INFO, "DOC Petition.\n");
-        sprintf(buf, DOC_HEADER, msglen);
+        sprintf(buf, DOC_HEADER, OK200, msglen);
     }
     else if (strcmp(extension, DOCX) == 0){
         syslog(LOG_INFO, "DOCX Petition.\n");
-        sprintf(buf, DOCX_HEADER, msglen);
+        sprintf(buf, DOCX_HEADER, OK200, msglen);
     }
     else if (strcmp(extension, PDF) == 0){
         syslog(LOG_INFO, "PDF Petition.\n");
-        sprintf(buf, PDF_HEADER, msglen);
+        sprintf(buf, PDF_HEADER, OK200, msglen);
     }
     else if (strcmp(extension, ICO) == 0){
         syslog(LOG_INFO, "ICO Petition.\n");
-        sprintf(buf, ICO_HEADER, msglen);
+        sprintf(buf, ICO_HEADER, OK200, msglen);
     }
     else return ERROR;
     //buf es la cabecera y response es el binario, por que no vaaaa?
@@ -220,7 +222,7 @@ STATUS POST(const char* path)
 
     msglen = strlen(buf);
 
-    sprintf(header, TXT_HEADER, msglen);
+    sprintf(header, TXT_HEADER, OK200, msglen);
     
     msglen += strlen(header);
 
@@ -234,12 +236,12 @@ STATUS POST(const char* path)
 STATUS OPTIONS()
 {
     char buf[BUFLEN];
-    const char *allowed_methods = "GET, POST, OPTIONS";
+    const char allowed_methods[] = "GET, POST, OPTIONS";
     int len;
 
     bzero(buf, BUFLEN);
 
-    len = snprintf(buf, BUFLEN, OPTIONS_HEADER, allowed_methods);
+    len = snprintf(buf, BUFLEN, OPTIONS_HEADER, OK200, allowed_methods);
     send(connfd, buf, len, 0);
     return OK;
 }
