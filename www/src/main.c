@@ -67,10 +67,10 @@ int main(int argv, char** argc){
     printf("IP:%s\n",ip);
 
     //Demonizamos el proceso
-    if(to_demonize()){
+    /* if(to_demonize()){
         cfg_free(conf);
         return EXIT_FAILURE;  //Creo que funciona pero no estoy seguro.
-    }
+    } */
 
     nchilds = cfg_getint(conf, "childs");
     if(nchilds > MAX){

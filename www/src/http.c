@@ -58,39 +58,112 @@ const char* get_file(const char *path, const char *ext){
     return NULL;
 }
 
-char** get_params(char* extension, char** params){
+int get_params(char* extension, char** params){
     if(!extension) return NULL;
     char* aux = strtok(extension, "=");
     aux = strtok(NULL, "=");
     
     
     
-    int count = 0;
+    int i = 0;
     char* token = strtok(aux, "+"); 
-    while (token != NULL && count < 100) {
-        params[count++] = token; 
+    while (token != NULL && i < 100) {
+        params[i] = (char*)malloc(64*sizeof(char)); 
+        strcpy(params[i],token); 
         token = strtok(NULL, "+"); 
+        printf("%s\n", params[i]);
+        i++;
     }
-    return count;
+    return i;
     
 }
 
 
+char* execute_script(char* path, int* len, char** params, int numparams){
+    char * extension, *aux;
+    int msglen = 0, i;
+
+    aux = strtok(path, "?");
+    extension = get_extension(aux);
+    FILE *fp;
+    char out[BUFLEN];
+    char buf[BUFLEN] = "";
+    char comm[BUFLEN] = "/usr/bin/php .";
+    char header[BUFLEN] = "";
+    char *output;
+    
+    if (strcmp(extension, PY)==0){
+        strcpy(comm, "/usr/bin/python3 ./");
+    }
+
+    output = (char*)malloc(BUFLEN*sizeof(char));
+    if (!output){
+        return NULL;
+    }
+        
+
+    /* Open the command for reading. */
+    if (numparams > 0){
+        path = strtok(path, "?");
+    }
+    strcat(comm, path);
+    printf("numparams: %d\n", numparams);
+    for (i = 0; i<numparams; i++){
+        
+        strcat(comm, " ");
+        strcat(comm, params[i]);
+    }
+
+    
+    printf("COMM: %s\n", comm);
+
+    fp = popen(comm, "r");
+    if (fp == NULL) {
+        printf("Failed to run command\n" );
+        return NULL;
+    }
+
+    /* Read the output a line at a time - output it. */
+    while (fgets(out, sizeof(out), fp) != NULL) {
+        strcat(buf, out);
+    }
+
+    msglen = strlen(buf);
+
+    sprintf(header, TXT_HEADER, OK200, msglen);
+    
+    msglen += strlen(header);
+
+    strcat(header, buf);
+
+    printf("HEAD: %s\n", header);
+
+    pclose(fp);
+
+    *len = msglen;
+    strcpy(output, header);
+    return output;
+}
+
 STATUS GET(const char *path)
 {
-    int msglen, size_total;
+    int msglen, size_total, numparams = 0;
     char buf[BUFLEN];
     const char *extension, *filename;
-    char * params[100];
+    char ** params;
     const void *response, *total;
     if (!path) return ERROR;
 
     bzero(buf, BUFLEN);
     strcpy(buf, "HTTP/1.1\n");
 
+    params = (char**)malloc(100*sizeof(char*));
+    if (!params){
+        return EXIT_FAILURE;
+    }
 
     syslog(LOG_INFO, "BEFORE\n");
-    get_params(path, params);
+    numparams = get_params(path, params);
     path = strtok(path, "?");
     syslog(LOG_INFO,"%s\n", path);
 
@@ -171,6 +244,11 @@ STATUS GET(const char *path)
         syslog(LOG_INFO, "ICO Petition.\n");
         sprintf(buf, ICO_HEADER, OK200, msglen);
     }
+    else if (strcmp(extension, PY) == 0 || strcmp(extension, PHP)){
+        syslog(LOG_INFO, "SCRIPT.\n");
+        sprintf(buf, TXT_HEADER, OK200, msglen);
+        response = execute_script(path, &msglen, params, numparams);
+    }
     else return ERROR;
     //buf es la cabecera y response es el binario, por que no vaaaa?
     
@@ -188,45 +266,27 @@ STATUS GET(const char *path)
 
 STATUS POST(const char* path)
 {
-    char * extension;
-    int msglen = 0;
-
-    extension = get_extension(path);
-    FILE *fp;
-    char out[BUFLEN];
-    char buf[BUFLEN] = "";
-    char comm[BUFLEN] = "/usr/bin/php .";
-    char header[BUFLEN] = "";
     
-    if (strcmp(extension, PY)==0){
-        strcpy(comm, "/usr/bin/python3 .");
-    }
-        
-
-    /* Open the command for reading. */
+    char * msg, **params;
+    int msglen = 0, numparams = 0;
     
-    strcat(comm, path);
-    fp = popen(comm, "r");
-    if (fp == NULL) {
-        printf("Failed to run command\n" );
-        exit(1);
-    }
-
-    /* Read the output a line at a time - output it. */
-    while (fgets(out, sizeof(out), fp) != NULL) {
-        strcat(buf, out);
-    }
-
-    msglen = strlen(buf);
-
-    sprintf(header, TXT_HEADER, OK200, msglen);
+    int flag;
+   
+    params = (char**)malloc(BUFLEN*sizeof(char*));
+    numparams = get_params(path, params);
     
-    msglen += strlen(header);
+    msg = execute_script(path, &msglen, params, numparams);
+   
 
-    strcat(header, buf);
-    send(connfd, header, msglen,0);
+    syslog(LOG_INFO, "msg: %s", msg);
+    
+    
+    flag = send(connfd, msg, msglen,0);
+    
+    printf("FL: %d\n", flag);
 
-    pclose(fp);
+    
+   
     return OK;
 }
 
