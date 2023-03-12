@@ -58,31 +58,21 @@ const char* get_file(const char *path, const char *ext){
     return NULL;
 }
 
-char** get_params(char* extension){
+char** get_params(char* extension, char** params){
     if(!extension) return NULL;
-
-    char delim[] = "=";
-    char **output;
-    char *aux;
-    char* token;
-    int size = 0;
+    char* aux = strtok(extension, "=");
+    aux = strtok(NULL, "=");
     
-
-    aux = strtok(extension, delim);
-    aux = strtok(extension, delim);
-
-    token = strtok(aux, "+");
-
-    while (aux != NULL){
-        output = (char**)realloc(output, size+1);
-        size++;
-        output[size-1] = (char*)malloc(30*sizeof(char));
-        strcpy(output[size-1],token);
-        token = strtok(aux, NULL);
-
-    }    
     
-    return output;
+    
+    int count = 0;
+    char* token = strtok(aux, "+"); 
+    while (token != NULL && count < 100) {
+        params[count++] = token; 
+        token = strtok(NULL, "+"); 
+    }
+    return count;
+    
 }
 
 
@@ -91,11 +81,18 @@ STATUS GET(const char *path)
     int msglen, size_total;
     char buf[BUFLEN];
     const char *extension, *filename;
+    char * params[100];
     const void *response, *total;
     if (!path) return ERROR;
 
     bzero(buf, BUFLEN);
     strcpy(buf, "HTTP/1.1\n");
+
+
+    syslog(LOG_INFO, "BEFORE\n");
+    get_params(path, params);
+    path = strtok(path, "?");
+    syslog(LOG_INFO,"%s\n", path);
 
     if (strcmp(INDEX1, path) == 0 || strcmp(INDEX2, path) == 0){
         syslog(LOG_INFO, "HTML Petition.\n");
