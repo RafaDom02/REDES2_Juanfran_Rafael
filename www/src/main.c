@@ -17,18 +17,19 @@
 #include "http.h"
 #include "types.h"
 #include "conf.h"
-#include "threadpool.h"
 
-#define MAX 20
+
+#define MAX 15
 #define MAXPATH 200
 
 int soc;
 cfg_t* conf = NULL;
-threadpool* tp;
+
 BOOL father = FALSE;
 size_t nchilds;
 int *childs;
 int acceptfd;
+
 
 /**
  * @brief Handler en caso de que llegue un SIGINT (ctrl+c)
@@ -53,7 +54,8 @@ int run_http();
 int main(int argv, char** argc){
     int port, ret, i=0, j=0;
     struct sockaddr_in servaddr;
-    char *ip;
+    char *ip, *server_signature = NULL;
+    
     //servaddr.sin_addr.s_addr = INADDR_ANY;
     ret = 0;
    
@@ -66,6 +68,8 @@ int main(int argv, char** argc){
     if(strcmp(ip,"Default") == 0) ip = getIP(cfg_getstr(conf,"interface"));
     printf("IP:%s\n",ip);
 
+    server_signature = cfg_getstr(conf, "server_signature");
+    printf("NAME: %s\n", server_signature);
     //Demonizamos el proceso
     /* if(to_demonize()){
         cfg_free(conf);
@@ -92,6 +96,8 @@ int main(int argv, char** argc){
         syslog(LOG_ERR, "Socket creation failed.\n");
         cfg_free(conf);
         free(childs);
+        free(ip);
+        free(server_signature);
         return EXIT_FAILURE;
     }
     else syslog(LOG_INFO, "Socket successfully created...\n");
@@ -102,6 +108,8 @@ int main(int argv, char** argc){
         close(soc);
         cfg_free(conf);
         free(childs);
+        free(ip);
+        free(server_signature);
         return EXIT_FAILURE;
     }
 
@@ -112,6 +120,8 @@ int main(int argv, char** argc){
         close(soc);
         cfg_free(conf);
         free(childs);
+        free(ip);
+        free(server_signature);
         return EXIT_FAILURE;
     }
 
@@ -127,6 +137,8 @@ int main(int argv, char** argc){
         close(soc);
         cfg_free(conf);
         free(childs);
+        free(ip);
+        free(server_signature);
         return EXIT_FAILURE;
     }
     else
@@ -138,6 +150,8 @@ int main(int argv, char** argc){
         close(soc);
         cfg_free(conf);
         free(childs);
+        free(ip);
+        free(server_signature);
         return EXIT_FAILURE;
     }
     else
@@ -150,12 +164,15 @@ int main(int argv, char** argc){
     //#############################################################//
 
     //####################### MULTI PROCESO #######################//
-    if(run_http() == EXIT_FAILURE){
+    if(run_http(cfg_getstr(conf,"server_signature")) == EXIT_FAILURE){
         syslog(LOG_ERR, "Childs creation failure.\n");
         for(i=0; i<nchilds; i++) kill(childs[i], SIGINT);
         close(soc);
         cfg_free(conf);
         free(childs);
+        free(ip);
+        free(server_signature);
+        return EXIT_FAILURE;
     }
     //#############################################################//
 
@@ -177,6 +194,8 @@ int main(int argv, char** argc){
     close(soc);
     cfg_free(conf);
     free(childs);
+    free(ip);
+    free(server_signature);
     syslog(LOG_INFO, "Finishing program.\n");
     return EXIT_SUCCESS;
 }
@@ -197,7 +216,7 @@ void sigint_handler(){
     exit(EXIT_SUCCESS);
 }
 
-int run_http(){
+int run_http(char* server_signature){
     int i;
     pid_t pid;
     struct sockaddr_in cli;
@@ -212,7 +231,7 @@ int run_http(){
                     syslog(LOG_ERR, "Socket accept failure.\n");
                     exit(EXIT_FAILURE);
                 }
-                http(acceptfd);
+                http(acceptfd, server_signature);
                 close(acceptfd);
             }
             exit(EXIT_SUCCESS);
