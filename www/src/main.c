@@ -73,7 +73,6 @@ int main(int argv, char** argc){
     printf("IP:%s\n",ip);
 
     server_signature = cfg_getstr(conf, "server_signature");
-    printf("NAME: %s\n", server_signature);
     //Demonizamos el proceso
     /* if(to_demonize()){
         cfg_free(conf);

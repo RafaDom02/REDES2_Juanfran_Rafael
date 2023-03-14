@@ -119,8 +119,9 @@ STATUS GET(const char *path, const char* server_signature, int minor_version)
         syslog(LOG_INFO, "SCRIPT Petition.\n");
         free(response);
         response = execute_script(path, &msglen, params, numparams, NULL);
+        
         sprintf(buf, TXT_HEADER, minor_version, OK200, msglen,date, lastmodified, server_signature);
-        free(params);
+        
     
     }
     else if (strcmp(extension, JS) == 0){
@@ -225,9 +226,6 @@ STATUS POST(const char* path, const char* server_signature, int minor_version, c
     }
     
     syslog(LOG_INFO, "msg: %s", msg);
-
-   
-
 
     size_total = strlen(buf) + msglen;
     total = (char*)malloc(size_total*sizeof(void));

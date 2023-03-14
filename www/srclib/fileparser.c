@@ -4,6 +4,9 @@
 #include <syslog.h>
 #include <unistd.h>
 #include <strings.h>
+#include <unistd.h>
+#include <sys/wait.h>
+#include <fcntl.h>
 #include "http.h"
 #include "fileparser.h"
 #include "types.h"
@@ -90,6 +93,8 @@ char* execute_script(char* path, int* len, char** params, int numparams, char* f
     char comm[BUFLEN] = "/usr/bin/php";
     char name[BUFLEN] = "php";
     char **args;
+
+    
     
     if (!form){
         form = def;
@@ -157,6 +162,7 @@ char* execute_script(char* path, int* len, char** params, int numparams, char* f
         dup2(readfd[1], STDOUT_FILENO); 
         execv(comm, args);
         
+        
         perror("execl");
         exit(1);
     } else {
@@ -165,16 +171,15 @@ char* execute_script(char* path, int* len, char** params, int numparams, char* f
         close(readfd[1]);
         strcat(form, "\n");
         write(pipefd[1], form, strlen(form)); // send input to the script
+        wait(NULL);
         *len = read(readfd[0], buf, BUFLEN);
         close(pipefd[1]);
         close(readfd[0]);
         free(args);
     }
 
-    printf("Buf: %s\n", buf);
-
     strcat(buf, "\0");
-
+  
     return buf;
 }
 

@@ -14,7 +14,13 @@ LIBS = $(LIB_DIR)/conf.a $(LIB_DIR)/fileparser.a $(LIB_DIR)/ip.a $(LIB_DIR)/pico
 
 .PHONY: all clean
 
-all: $(EXE)
+all: clean objdir libdir $(EXE)
+
+objdir:
+	mkdir -p obj
+
+libdir:
+	mkdir -p lib
 
 $(EXE): $(OBJ_DIR)/main.o $(OBJ_DIR)/http.o $(LIBS) 
 	$(CC) $(CFLAGS) $(LDFLAGS) $^  -o $@ 
