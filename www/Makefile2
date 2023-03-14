@@ -1,0 +1,53 @@
+########################################################################3
+
+CC = gcc
+CFLAGS = -Wall -I./include
+
+SRCDIR = ./src
+LIBDIR = ./lib
+SRCLIBDIR = ./srclib
+INCDIR = ./include
+IFLAGS = -l:libconfuse.a -I $(INCDIR)
+
+# List of source files
+SRCS = $(SRCDIR)/main.c $(SRCLIBDIR)/conf.c $(SRCLIBDIR)/fileparser.c $(SRCLIBDIR)/http.c $(SRCLIBDIR)/ip.c $(SRCLIBDIR)/picohttpparser.c
+
+# List of object files to be created
+OBJS = $(patsubst $(SRCLIBDIR)/%.c, $(LIBDIR)/%.o, $(SRCS))
+
+# List of header files
+HDRS = $(INCDIR)/conf.h $(INCDIR)/fileparser.h $(INCDIR)/http.h $(INCDIR)/ip.h $(INCDIR)/picohttpparser.h $(INCDIR)/types.h
+
+# Target executable
+TARGET = server
+
+# Target libraries
+LIBS = $(LIBDIR)/libconf.a $(LIBDIR)/libfileparser.a $(LIBDIR)/libhttp.a $(LIBDIR)/libip.a $(LIBDIR)/libpicohttpparser.a
+
+.PHONY: all clean
+
+all: $(TARGET)
+
+$(TARGET): $(LIBS) $(SRCDIR)/main.c $(HDRS)
+	$(CC) $(CFLAGS) $^ -o $@ $(IFLAGS)
+
+$(LIBDIR)/libconf.a: $(LIBDIR)/conf.o
+	ar rcs $@ $<
+
+$(LIBDIR)/libfileparser.a: $(LIBDIR)/fileparser.o
+	ar rcs $@ $<
+
+$(LIBDIR)/libhttp.a: $(LIBDIR)/http.o $(LIBDIR)/fileparser.o
+	ar rcs $@ $^
+
+$(LIBDIR)/libip.a: $(LIBDIR)/ip.o
+	ar rcs $@ $<
+
+$(LIBDIR)/libpicohttpparser.a: $(LIBDIR)/picohttpparser.o
+	ar rcs $@ $<
+
+$(LIBDIR)/%.o: $(SRCLIBDIR)/%.c $(HDRS)
+	$(CC) $(CFLAGS) -c $< -o $@
+
+clean:
+	rm -f $(LIBDIR)/*.o $(LIBDIR)/*.a $(TARGET)

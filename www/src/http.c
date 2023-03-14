@@ -9,9 +9,9 @@
 #include <sys/socket.h>
 #include <sys/stat.h>
 #include <time.h>
+#include "http.h"
 #include "confuse.h"
 #include "picohttpparser.h"
-#include "http.h"
 #include "errno.h"
 #include "fileparser.h"
 #include "types.h"
@@ -193,21 +193,24 @@ STATUS GET(const char *path, const char* server_signature, int minor_version)
 STATUS POST(const char* path, const char* server_signature, int minor_version, char* form)
 {
     
-    char * msg, **params, buf[BUFLEN], date[BUFLEN], lastmodified[BUFLEN], *total;
+    char * msg = NULL, **params = NULL, buf[BUFLEN] = "", date[BUFLEN] = "", lastmodified[BUFLEN] = "", *total = NULL;
     int msglen = 0, numparams = 0, size_total = 0;
     
-    int flag;
+    int flag = 0;
 
     time_t now = time(NULL);
-    struct tm* tm_info = gmtime(&now), *tm_lm;
+    struct tm* tm_info = gmtime(&now), *tm_lm = NULL;
     struct stat attr;
+    
 
     //Obtenemos la fecha actual y la fecha de ultima modificación del fichero deseado
     strftime(date, 40, "%a, %d %b %Y %H:%M:%S GMT", tm_info);
 
     stat(path+1, &attr);
     tm_lm = gmtime(&(attr.st_mtime));
+    if (tm_lm != NULL){
     strftime(lastmodified, 40, "%a, %d %b %Y %H:%M:%S GMT", tm_lm);
+    }
     
    
     params = (char**)malloc(BUFLEN*sizeof(char*));
@@ -217,15 +220,22 @@ STATUS POST(const char* path, const char* server_signature, int minor_version, c
     msg = execute_script(path, &msglen, params, numparams, form);
     sprintf(buf, TXT_HEADER, minor_version, OK200, msglen, date, lastmodified, server_signature);
 
+    if (!msg){
+        exit(1);
+    }
+    
     syslog(LOG_INFO, "msg: %s", msg);
 
-    printf("BUF: %s\n", buf);
-    printf("MSG: %s\n", msg);
+   
 
 
     size_total = strlen(buf) + msglen;
-    total = malloc(size_total*sizeof(void));
-
+    total = (char*)malloc(size_total*sizeof(void));
+    if (!total){
+        exit(1);
+    }
+    strcpy(total, "");
+    
     memcpy(total, buf, strlen(buf));
     memcpy(total + strlen(buf), msg, msglen);
     
@@ -364,8 +374,19 @@ int http(int fd, char* server_signature)
     }
     else{ //En caso de ser una petición desconocida, ejecutamos el error 400
         syslog(LOG_ERR, "UNKNOWN method petition.\n");
+        time_t now = time(NULL);
+        struct tm* tm_info = gmtime(&now), *tm_lm;
+        struct stat attr;
+        char* date, *lastmodified;
+
+        //Obtenemos la fecha actual y la fecha de ultima modificación del fichero deseado
+        strftime(date, 40, "%a, %d %b %Y %H:%M:%S GMT", tm_info);
+        stat(path+1, &attr);
+        tm_lm = gmtime(&(attr.st_mtime));
+        strftime(lastmodified, 40, "%a, %d %b %Y %H:%M:%S GMT", tm_lm);
+
         response = file_parser("media/html/error/e400.html", "r", &msglen);
-        sprintf(buf, HTML_HEADER, ERROR404, msglen);
+        sprintf(buf, HTML_HEADER, minor_version, ERROR404, msglen, date, lastmodified, server_signature);
         strcat(buf, (char*)response);
         send(connfd, buf, strlen(buf), 0);
         free(response);

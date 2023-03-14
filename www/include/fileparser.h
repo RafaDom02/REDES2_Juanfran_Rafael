@@ -2,7 +2,7 @@
 #define _FILEPARSER_H
 
 
-void* file_parser(const char *html, const char *mode, int* size_file);
+void* file_parser(const char *filename, const char *mode, int* size_file);
 const char* get_extension(const char *path);
 const char* get_file(const char *path, const char *ext);
 int get_params(char* extension, char** params);

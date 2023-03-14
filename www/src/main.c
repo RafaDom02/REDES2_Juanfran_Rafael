@@ -12,9 +12,9 @@
 #include <fcntl.h>
 #include <string.h>
 #include <strings.h>
+#include "http.h"
 #include "confuse.h"
 #include "ip.h"
-#include "http.h"
 #include "types.h"
 #include "conf.h"
 
@@ -217,7 +217,6 @@ void sigint_handler(){
         for(i=0; i<nchilds; i++) kill(childs[i], SIGINT);
         for(i=0; i<nchilds; i++) wait(NULL);
         close(soc);
-        cfg_free(conf);
         free(childs);
         closelog();
         syslog(LOG_INFO, "Finishing program.\n");
@@ -256,7 +255,7 @@ int run_http(char* server_signature){
         }
     }
     father = TRUE;
-    for(i=0; i<nchilds; i++) wait(NULL);
+    while(1);
     return EXIT_SUCCESS;
 }
 

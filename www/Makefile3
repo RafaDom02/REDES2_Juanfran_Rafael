@@ -1,0 +1,40 @@
+.PHONY: clean
+CFLAGS = -Wall -pedantic -fno-stack-protector -g 
+CONF = -lconfuse
+CC = gcc
+C = src/
+H = includes/
+O = obj/
+L = lib/
+SL = srclib/
+
+all : server 
+
+server: $(O)server.o $(O)socket.o $(O)picohttpparser.o 
+	$(CC) $(CFLAGS)	$(CONF) $^ -o $@ -pthread -L$(L) 
+
+client: $(O)client.o
+	$(CC) $(CFLAGS)	$^ -o $@ -pthread -L$(L)
+
+$(O)server.o: $(C)server.c
+	$(CC) $(CFLAGS) -c $< -o $@ $(CONF)
+
+$(O)client.o: $(C)client.c
+	$(CC) $(CFLAGS) -c $< -o $@
+
+$(O)socket.o: $(SL)socket.c
+	$(CC) $(CFLAGS) -c $< -o $@
+
+$(O)confuse.o: $(SL)confuse.c 
+	$(CC) $(CFLAGS) -c $< -o $@
+
+$(O)picohttpparser.o: $(SL)picohttpparser.c 
+	$(CC) $(CFLAGS) -c $< -o $@
+
+$(L) libutils.a: $(O)socket.o 
+	ar -rcs $@ $^
+
+
+clean:
+	@echo "cleaning"
+	rm $(O)*.o client server
