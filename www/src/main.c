@@ -27,7 +27,7 @@ cfg_t* conf = NULL;
 
 BOOL father = FALSE;
 size_t nchilds;
-int *childs;
+int *childs = NULL;
 int acceptfd;
 
 
@@ -65,7 +65,11 @@ int main(int argv, char** argc){
     if(!conf) return EXIT_FAILURE;
 
     ip = cfg_getstr(conf, "ip");
-    if(strcmp(ip,"Default") == 0) ip = getIP(cfg_getstr(conf,"interface"));
+    if(strcmp(ip,"Default") == 0){
+        free(ip);
+        ip = NULL;
+        ip = getIP(cfg_getstr(conf,"interface"));
+    }
     printf("IP:%s\n",ip);
 
     server_signature = cfg_getstr(conf, "server_signature");
@@ -73,6 +77,9 @@ int main(int argv, char** argc){
     //Demonizamos el proceso
     /* if(to_demonize()){
         cfg_free(conf);
+        closelog();
+        free(ip);
+        free(server_signature);
         return EXIT_FAILURE;  //Creo que funciona pero no estoy seguro.
     } */
 
@@ -96,7 +103,9 @@ int main(int argv, char** argc){
         syslog(LOG_ERR, "Socket creation failed.\n");
         cfg_free(conf);
         free(childs);
-        free(ip);
+        if (ip != NULL)
+            free(ip);
+        closelog();
         free(server_signature);
         return EXIT_FAILURE;
     }
@@ -108,7 +117,9 @@ int main(int argv, char** argc){
         close(soc);
         cfg_free(conf);
         free(childs);
-        free(ip);
+        if (ip != NULL)
+            free(ip);
+        closelog();
         free(server_signature);
         return EXIT_FAILURE;
     }
@@ -120,10 +131,13 @@ int main(int argv, char** argc){
         close(soc);
         cfg_free(conf);
         free(childs);
-        free(ip);
+        if (ip != NULL)
+            free(ip);
+        closelog();
         free(server_signature);
         return EXIT_FAILURE;
     }
+ 
 
     /****Asignamos una direccion IP y un PORT****/
     bzero(&servaddr, sizeof(servaddr));
@@ -137,7 +151,7 @@ int main(int argv, char** argc){
         close(soc);
         cfg_free(conf);
         free(childs);
-        free(ip);
+        closelog();
         free(server_signature);
         return EXIT_FAILURE;
     }
@@ -150,27 +164,23 @@ int main(int argv, char** argc){
         close(soc);
         cfg_free(conf);
         free(childs);
-        free(ip);
+        closelog();
         free(server_signature);
         return EXIT_FAILURE;
     }
     else
         syslog(LOG_INFO, "Server listening..\n");
 
-
+    if(conf != NULL) cfg_free(conf);
     /****El servidor acepta al cliente****/
-    //####################### VARIOS HILOS ########################//
-    //threadpool_start(tp, soc);
-    //#############################################################//
-
     //####################### MULTI PROCESO #######################//
-    if(run_http(cfg_getstr(conf,"server_signature")) == EXIT_FAILURE){
+    if(run_http(server_signature) == EXIT_FAILURE){
         syslog(LOG_ERR, "Childs creation failure.\n");
         for(i=0; i<nchilds; i++) kill(childs[i], SIGINT);
         close(soc);
-        cfg_free(conf);
-        free(childs);
-        free(ip);
+        if (childs != NULL)
+            free(childs);
+        closelog();
         free(server_signature);
         return EXIT_FAILURE;
     }
@@ -192,10 +202,11 @@ int main(int argv, char** argc){
 
 
     close(soc);
-    cfg_free(conf);
-    free(childs);
-    free(ip);
-    free(server_signature);
+    if (childs != NULL)
+        free(childs);
+    closelog();
+    if (server_signature != NULL)
+        free(server_signature);
     syslog(LOG_INFO, "Finishing program.\n");
     return EXIT_SUCCESS;
 }
@@ -206,7 +217,9 @@ void sigint_handler(){
         for(i=0; i<nchilds; i++) kill(childs[i], SIGINT);
         for(i=0; i<nchilds; i++) wait(NULL);
         close(soc);
+        cfg_free(conf);
         free(childs);
+        closelog();
         syslog(LOG_INFO, "Finishing program.\n");
     }
     else{
@@ -236,7 +249,11 @@ int run_http(char* server_signature){
             }
             exit(EXIT_SUCCESS);
         }
-        else childs[i] = pid;
+        else{
+            if(childs == NULL)
+                childs = (int*)malloc(nchilds*sizeof(int));
+            childs[i] = pid;
+        }
     }
     father = TRUE;
     for(i=0; i<nchilds; i++) wait(NULL);

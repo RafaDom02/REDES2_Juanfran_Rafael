@@ -7,6 +7,8 @@
 #include <syslog.h>
 #include <sys/types.h>
 #include <sys/socket.h>
+#include <sys/stat.h>
+#include <time.h>
 #include "confuse.h"
 #include "picohttpparser.h"
 #include "http.h"
@@ -16,136 +18,22 @@
 #include <netinet/in.h>
 #include <netdb.h>
  
-#define MAXEXT 6
 #define MAXPATH 200
-#define BUFLEN 10000
 
 
 int connfd;
 
-/**
- * @brief Get the extension of a file
- * 
- * @param path string with the path
- * @return extension
- */
-const char* get_extension(const char *path){
-    char *s;
-    if(!path) return NULL;
-
-    s = &(path[strlen(path)-1]);
-
-    for(; path != s && s[0] != '.'; s--);    //Comprobamos que que file no es mayor al path dado o que s[0] sea una .
-
-    if(s[0] == '.') return s;                //Si ha acabado el for-loop con el punto, devuelve la extension
-    return NULL;
-}
-
-/**
- * @brief Get the file name from a path
- * 
- * @param path string with the path
- * @param ext string with the extension
- * @return file name
- */
-const char* get_file(const char *path, const char *ext){
-    char *s = strstr(path, ext);
-    if(!s) return NULL;
-
-    for(; path != s && s[0] != '/'; s--);   //Comprobamos que que file no es mayor al path dado o que s[0] sea una /
-
-    if(s[0] == '/') return ++s;             //Eliminamos la barra del directorio si ha acabado el for-loop por la barra
-    return NULL;
-}
-
-int get_params(char* extension, char** params){
-    if(!extension) return NULL;
-    char* aux = strtok(extension, "=");
-    aux = strtok(NULL, "=");
-    
-    
-    
-    int i = 0;
-    char* token = strtok(aux, "+"); 
-    while (token != NULL && i < 100) {
-        params[i] = (char*)malloc(64*sizeof(char)); 
-        strcpy(params[i],token); 
-        token = strtok(NULL, "+"); 
-        printf("%s\n", params[i]);
-        i++;
-    }
-    return i;
-    
-}
-
-
-char* execute_script(char* path, int* len, char** params, int numparams){
-    char * extension, *aux;
-    int msglen = 0, i;
-
-    aux = strtok(path, "?");
-    extension = get_extension(aux);
-    FILE *fp;
-    char out[BUFLEN];
-    char buf[BUFLEN] = "";
-    char comm[BUFLEN] = "/usr/bin/php ./";
-    char header[BUFLEN] = "";
-    char *output;
-    
-    if (strcmp(extension, PY)==0){
-        strcpy(comm, "/usr/bin/python3 ./");
-    }
-
-    output = (char*)malloc(BUFLEN*sizeof(char));
-    if (!output){
-        return NULL;
-    }
-        
-
-    /* Open the command for reading. */
-    if (numparams > 0){
-        path = strtok(path, "?");
-    }
-    strcat(comm, path);
-    printf("numparams: %d\n", numparams);
-    for (i = 0; i<numparams; i++){
-        
-        strcat(comm, " ");
-        strcat(comm, params[i]);
-    }
-
-    
-    printf("COMM: %s\n", comm);
-
-    fp = popen(comm, "r");
-    if (fp == NULL) {
-        printf("Failed to run command\n" );
-        return NULL;
-    }
-
-    /* Read the output a line at a time - output it. */
-    while (fgets(out, sizeof(out), fp) != NULL) {
-        strcat(buf, out);
-    }
-
-    msglen = strlen(buf);
-
-
-    strcat(header, buf);
-
-    printf("HEAD: %s\n", header);
-
-    pclose(fp);
-
-    *len = msglen;
-    strcpy(output, header);
-    return output;
-}
-
+/********
+* FUNCIÓN: STATUS GET(const char *path, const char* server_signature, int minor_version)
+* ARGS_IN: const char* path - path del archivo pedido; const char* server_signature - nombre del servidor;
+*          int minor_version - version del HTTP/1.x
+* DESCRIPCIÓN: Se encarga de ejecutar el codigo para el correcto funcionamiento del método GET
+* ARGS_OUT: STATUS - OK o ERROR
+********/
 STATUS GET(const char *path, const char* server_signature, int minor_version)
 {
     int msglen, size_total, numparams = 0, i;
-    char buf[BUFLEN], date[BUFLEN];
+    char buf[BUFLEN], date[BUFLEN], lastmodified[BUFLEN];
     const char *extension, *filename;
     char ** params;
     const void *response, *total;
@@ -159,26 +47,33 @@ STATUS GET(const char *path, const char* server_signature, int minor_version)
         return EXIT_FAILURE;
     }
 
-    syslog(LOG_INFO, "BEFORE\n");
     numparams = get_params(path, params);
     path = strtok(path, "?");
     syslog(LOG_INFO,"%s\n", path);
 
-   time_t now = time(NULL);
-    struct tm* tm_info = gmtime(&now);
+    //Obtenemos la fecha actual y la fecha de ultima modificación del fichero deseado
+    time_t now = time(NULL);
+    struct tm* tm_info = gmtime(&now), *tm_lm;
+    struct stat attr;
 
     strftime(date, 40, "%a, %d %b %Y %H:%M:%S GMT", tm_info);
 
+    stat(path, &attr);
+    tm_lm = gmtime(&(attr.st_mtime));
+    strftime(lastmodified, 40, "%a, %d %b %Y %H:%M:%S GMT", tm_lm);
+
+    //En caso que el path sea ip:port/ o ip:port/index.html, envia el fichero index.html
     if (strcmp(INDEX1, path) == 0 || strcmp(INDEX2, path) == 0){
         syslog(LOG_INFO, "HTML Petition.\n");
         response = file_parser("media/html/index.html", "r", &msglen);
-        sprintf(buf, HTML_HEADER, minor_version, OK200, msglen,date, server_signature);
+        sprintf(buf, HTML_HEADER, minor_version, OK200, msglen,date,lastmodified, server_signature);
         strcat(buf, (char*)response);
         send(connfd, buf, strlen(buf), 0);
         free(response);
         return OK;
     }
 
+    //Obtienemos la extensión del fichero, el nombre del fichero y el contenido del fichero
     syslog(LOG_INFO, "Path: %s\n", path);
     extension = get_extension(path);
     syslog(LOG_INFO, "Extension: %s\n", extension);
@@ -186,10 +81,11 @@ STATUS GET(const char *path, const char* server_signature, int minor_version)
     syslog(LOG_INFO, "Filename: %s\n", filename);
     response = file_parser(++path, "rb", &msglen);
    
+    //En caso de que no exista el fichero enviamos el error 404
     if(!response){
         syslog(LOG_INFO, "Response: No response\n");
         response = file_parser("media/html/error/e404.html", "r", &msglen);
-        sprintf(buf, HTML_HEADER, minor_version, ERROR404, msglen, date, server_signature);
+        sprintf(buf, HTML_HEADER, minor_version, ERROR404, msglen, date, lastmodified, server_signature);
         strcat(buf, (char*)response);
         send(connfd, buf, strlen(buf), 0);
         
@@ -197,110 +93,129 @@ STATUS GET(const char *path, const char* server_signature, int minor_version)
         free(params[i]);
         }
         free(params);
+        if (response != NULL)
+            free(response);
+        
         return OK;
     }
     else
         syslog(LOG_INFO, "Response: %s\n", (char*)response);
+    
+    //En caso contrario, asociamos una cabecera dependiendo del tipo de extension
     if (strcmp(extension, HTML) == 0){
         syslog(LOG_INFO, "HTML Petition.\n");
-        sprintf(buf, HTML_HEADER, minor_version, OK200, msglen, date, server_signature);
+        sprintf(buf, HTML_HEADER, minor_version, OK200, msglen, date, lastmodified, server_signature);
     }
     else if (strcmp(extension, JPG) == 0 || strcmp(extension, JPEG) == 0){
         syslog(LOG_INFO, "JPG/JPEG Petition.\n");
-        sprintf(buf, JPG_HEADER, minor_version, OK200, msglen,date, server_signature);
+        sprintf(buf, JPG_HEADER, minor_version, OK200, msglen,date, lastmodified, server_signature);
     }
     else if (strcmp(extension, PNG) == 0){
         syslog(LOG_INFO, "PNG Petition.\n");
-        sprintf(buf, PNG_HEADER, minor_version, OK200, msglen,date, server_signature);
-    }
-    else if (strcmp(extension, JS) == 0){
-        syslog(LOG_INFO, "JS Petition.\n");
-        sprintf(buf, JS_HEADER, minor_version, OK200, msglen,date, server_signature);
-    }
-    else if (strcmp(extension, CSS) == 0){
-        syslog(LOG_INFO, "CSS Petition.\n");
-        sprintf(buf, CSS_HEADER, minor_version, OK200, msglen,date, server_signature);
-    }
-    else if (strcmp(extension, SVG) == 0){
-        syslog(LOG_INFO, "SVG Petition.\n");
-        sprintf(buf, SVG_HEADER, minor_version, OK200, msglen,date, server_signature);
-    }
-    else if (strcmp(extension, TXT) == 0){
-        syslog(LOG_INFO, "TXT Petition.\n");
-        sprintf(buf, TXT_HEADER, minor_version, OK200, --msglen,date, server_signature);
-    }
-    else if (strcmp(extension, GIF) == 0){
-        syslog(LOG_INFO, "GIF Petition.\n");
-        sprintf(buf, GIF_HEADER, minor_version, OK200, msglen,date, server_signature);
-    }
-    else if (strcmp(extension, MPG) == 0 || strcmp(extension, MPEG) == 0){
-        syslog(LOG_INFO, "MPG/MPEG Petition.\n");
-        sprintf(buf, VIDEO_HEADER, minor_version, OK200, msglen,date, server_signature);
-    }
-    else if (strcmp(extension, DOC) == 0){
-        syslog(LOG_INFO, "DOC Petition.\n");
-        sprintf(buf, DOC_HEADER, minor_version, OK200, msglen,date, server_signature);
-    }
-    else if (strcmp(extension, DOCX) == 0){
-        syslog(LOG_INFO, "DOCX Petition.\n");
-        sprintf(buf, DOCX_HEADER, minor_version, OK200, msglen,date, server_signature);
-    }
-    else if (strcmp(extension, PDF) == 0){
-        syslog(LOG_INFO, "PDF Petition.\n");
-        sprintf(buf, PDF_HEADER, minor_version, OK200, msglen,date, server_signature);
-    }
-    else if (strcmp(extension, ICO) == 0){
-        syslog(LOG_INFO, "ICO Petition.\n");
-        sprintf(buf, ICO_HEADER, minor_version, OK200, msglen,date, server_signature);
+        sprintf(buf, PNG_HEADER, minor_version, OK200, msglen,date, lastmodified, server_signature);
     }
     else if (strcmp(extension, PY) == 0 || strcmp(extension, PHP) == 0){
        
         syslog(LOG_INFO, "SCRIPT Petition.\n");
-        response = execute_script(path, &msglen, params, numparams);
-        sprintf(buf, TXT_HEADER, minor_version, OK200, msglen,date, server_signature);
+        free(response);
+        response = execute_script(path, &msglen, params, numparams, NULL);
+        sprintf(buf, TXT_HEADER, minor_version, OK200, msglen,date, lastmodified, server_signature);
+        free(params);
+    
     }
+    else if (strcmp(extension, JS) == 0){
+        syslog(LOG_INFO, "JS Petition.\n");
+        sprintf(buf, JS_HEADER, minor_version, OK200, msglen,date, lastmodified, server_signature);
+    }
+    else if (strcmp(extension, CSS) == 0){
+        syslog(LOG_INFO, "CSS Petition.\n");
+        sprintf(buf, CSS_HEADER, minor_version, OK200, msglen,date, lastmodified, server_signature);
+    }
+    else if (strcmp(extension, SVG) == 0){
+        syslog(LOG_INFO, "SVG Petition.\n");
+        sprintf(buf, SVG_HEADER, minor_version, OK200, msglen,date, lastmodified, server_signature);
+    }
+    else if (strcmp(extension, TXT) == 0){
+        syslog(LOG_INFO, "TXT Petition.\n");
+        sprintf(buf, TXT_HEADER, minor_version, OK200, --msglen,date, lastmodified, server_signature);
+    }
+    else if (strcmp(extension, GIF) == 0){
+        syslog(LOG_INFO, "GIF Petition.\n");
+        sprintf(buf, GIF_HEADER, minor_version, OK200, msglen,date, lastmodified, server_signature);
+    }
+    else if (strcmp(extension, MPG) == 0 || strcmp(extension, MPEG) == 0){
+        syslog(LOG_INFO, "MPG/MPEG Petition.\n");
+        sprintf(buf, VIDEO_HEADER, minor_version, OK200, msglen,date, lastmodified, server_signature);
+    }
+    else if (strcmp(extension, DOC) == 0 || strcmp(extension, DOCX) == 0){
+        syslog(LOG_INFO, "DOC Petition.\n");
+        sprintf(buf, DOC_HEADER, minor_version, OK200, msglen,date, lastmodified, server_signature);
+    }
+    else if (strcmp(extension, PDF) == 0){
+        syslog(LOG_INFO, "PDF Petition.\n");
+        sprintf(buf, PDF_HEADER, minor_version, OK200, msglen,date, lastmodified, server_signature);
+    }
+    else if (strcmp(extension, ICO) == 0){
+        syslog(LOG_INFO, "ICO Petition.\n");
+        printf("NOS LLEGA UNA PETICION ICO.");
+        sprintf(buf, ICO_HEADER, minor_version, OK200, msglen,date, lastmodified, server_signature);
+    }
+    
     else return ERROR;
-    //buf es la cabecera y response es el binario, por que no vaaaa?
     
     size_total = strlen(buf) + msglen;
     syslog(LOG_INFO, "%d = %ld + %d\n", size_total, strlen(buf), msglen);
     
     total = malloc(size_total*sizeof(void));
 
+    //Enviamos la cabecera junto al contenido del fichero
     memcpy(total, buf, strlen(buf));
     memcpy(total + strlen(buf), response, msglen);
 
     send(connfd, total, size_total, 0);
-    free(filename);
-    free(extension);
+
     free(total);
-    free(response);
-    for (i = 0; i<numparams;i++){
-        free(params[i]);
-    }
-    free(params);
+    if (response != NULL)
+        free(response);
+    
+    free_params(params, numparams);
+    
     return OK;
 }
 
-STATUS POST(const char* path, const char* server_signature, int minor_version)
+/********
+* FUNCIÓN: STATUS POST(const char* path, const char* server_signature, int minor_version, char* form)
+* ARGS_IN: const char* path - path del archivo pedido; const char* server_signature - nombre del servidor;
+*          int minor_version - version del HTTP/1.x; char* form - formulario de la pagina POST
+* DESCRIPCIÓN: Se encarga de ejecutar el codigo para el correcto funcionamiento del método POST
+* ARGS_OUT: STATUS - OK o ERROR
+********/
+STATUS POST(const char* path, const char* server_signature, int minor_version, char* form)
 {
     
-    char * msg, **params, buf[BUFLEN], date[BUFLEN], *total;
+    char * msg, **params, buf[BUFLEN], date[BUFLEN], lastmodified[BUFLEN], *total;
     int msglen = 0, numparams = 0, size_total = 0;
     
     int flag;
 
     time_t now = time(NULL);
-    struct tm* tm_info = gmtime(&now);
+    struct tm* tm_info = gmtime(&now), *tm_lm;
+    struct stat attr;
 
+    //Obtenemos la fecha actual y la fecha de ultima modificación del fichero deseado
     strftime(date, 40, "%a, %d %b %Y %H:%M:%S GMT", tm_info);
+
+    stat(path+1, &attr);
+    tm_lm = gmtime(&(attr.st_mtime));
+    strftime(lastmodified, 40, "%a, %d %b %Y %H:%M:%S GMT", tm_lm);
+    
    
     params = (char**)malloc(BUFLEN*sizeof(char*));
     numparams = get_params(path, params);
     
 
-    msg = execute_script(path, &msglen, params, numparams);
-    sprintf(buf, TXT_HEADER, minor_version, OK200, msglen, date, server_signature);
+    msg = execute_script(path, &msglen, params, numparams, form);
+    sprintf(buf, TXT_HEADER, minor_version, OK200, msglen, date, lastmodified, server_signature);
 
     syslog(LOG_INFO, "msg: %s", msg);
 
@@ -312,9 +227,7 @@ STATUS POST(const char* path, const char* server_signature, int minor_version)
     memcpy(total + strlen(buf), msg, msglen);
     
     flag = send(connfd, total, size_total,0);
-    
-   
-    
+
     for (int i = 0; i < numparams; i++)
         free(params[i]);
    
@@ -324,6 +237,12 @@ STATUS POST(const char* path, const char* server_signature, int minor_version)
     return OK;
 }
 
+/********
+* FUNCIÓN: STATUS OPTIONS(const char*server_signature, int minor_version)
+* ARGS_IN: const char *server_signature - nombre del servidor; int minor_version - version del HTTP/1.x
+* DESCRIPCIÓN: Envia por la conexión los distintos métodos disponibles
+* ARGS_OUT: STATUS - OK o ERROR
+********/
 STATUS OPTIONS(const char*server_signature, int minor_version)
 {
     char buf[BUFLEN];
@@ -332,11 +251,18 @@ STATUS OPTIONS(const char*server_signature, int minor_version)
 
     bzero(buf, BUFLEN);
 
+    //Enviamos la cabecera junto a los métodos permitidos en el servidor
     len = snprintf(buf, BUFLEN, OPTIONS_HEADER, minor_version, OK200, allowed_methods, server_signature);
     send(connfd, buf, len, 0);
     return OK;
 }
 
+/********
+* FUNCIÓN: int http(int fd, char* server_signature)
+* ARGS_IN: int fd - conexion abierta por la función accept; char* server_signature - nombre del servidor
+* DESCRIPCIÓN: Obtiene la petición de la conexión y llama a la función GET, POST u OPTIONS dependiendo del método pedido
+* ARGS_OUT: int - EXIT_SUCCESS o EXIT_FAILURE
+********/
 int http(int fd, char* server_signature)
 {
     char buf[BUFLEN];
@@ -346,11 +272,14 @@ int http(int fd, char* server_signature)
     size_t buflen = 0, prevbuflen = 0, method_len, path_len, num_headers;
     ssize_t rret;
     const void *response;
+    char *content_type = NULL;
+    int content_length = 0;
+    char post_form[BUFLEN] = "";
 
     connfd = fd;
     while (1)
     {
-        /* read the request */
+        //Leemos la conexión hasta que llegue una petición
         while ((rret = read(connfd, buf + buflen, sizeof(buf) - buflen)) == -1 && errno == EINTR);       
         
         if (rret < 0)
@@ -358,7 +287,7 @@ int http(int fd, char* server_signature)
         prevbuflen = buflen;
         buflen += rret;
        
-        /* parse the request */
+        //Llamamos a phr_parse_request para obtener los datos de la conexion
         num_headers = sizeof(headers) / sizeof(headers[0]);
         pret = phr_parse_request(buf, buflen, &method, &method_len, &path, &path_len,
                                  &minor_version, headers, &num_headers, prevbuflen);
@@ -373,8 +302,10 @@ int http(int fd, char* server_signature)
         }
         
     }
+    //Dividimos del path para solo obtener el nombre del fichero deseado
     path= strtok(path," ");
 
+    //Dependiendo del método deseado, llamamos a una fución distinta
     if (method[0] == 'G'){
         syslog(LOG_INFO, "GET method petition.\n");
         if(GET(path, server_signature, minor_version) == ERROR)
@@ -384,17 +315,41 @@ int http(int fd, char* server_signature)
         }
         else syslog(LOG_INFO, "GET method success.\n");
     }
-
     else if(method[0] == 'P'){
         syslog(LOG_INFO, "POST method petition.\n");
-        if(POST(path, server_signature, minor_version) == ERROR)
+
+        
+        strcpy(post_form, headers[num_headers-1].name);
+        strtok(post_form, "\r\n");
+        strcpy(post_form, strtok(NULL, "\r\n"));
+        
+        printf("%s\n", post_form);
+
+        for (int i = 0; i < num_headers; i++) {
+            
+            if (strcasecmp(strtok(headers[i].name,":"), "Content-Type") == 0) {
+            content_type = strtok(headers[i].value, "\n");
+            
+            
+            
+            } else if (strcasecmp(headers[i].name, "Content-Length") == 0) {
+            content_length = atoi(strtok(headers[i].value, "\n"));
+            } 
+        }
+        
+        if(content_type != NULL)    
+            if (strcasecmp(content_type, "application/x-www-form-urlencoded\r") != 0){
+           
+            return -1;
+        }
+        
+        if(POST(path, server_signature, minor_version, post_form) == ERROR)
         {
             syslog(LOG_ERR, "POST method failure.\n");
             return EXIT_FAILURE;
         }
         else syslog(LOG_INFO, "POST method success.\n");
     }
-
     else if(method[0] == 'O'){
         syslog(LOG_INFO, "OPTIONS method petition.\n");
         if(OPTIONS(server_signature, minor_version) == ERROR)
@@ -404,7 +359,7 @@ int http(int fd, char* server_signature)
         }
         else syslog(LOG_INFO, "OPTIONS method success.\n");
     }
-    else{
+    else{ //En caso de ser una petición desconocida, ejecutamos el error 400
         syslog(LOG_ERR, "UNKNOWN method petition.\n");
         response = file_parser("media/html/error/e400.html", "r", &msglen);
         sprintf(buf, HTML_HEADER, ERROR404, msglen);
@@ -414,7 +369,7 @@ int http(int fd, char* server_signature)
         return EXIT_FAILURE;
     }
 
-
+    //Imprimimos en el log los datos de la petición
     syslog(LOG_INFO, "Minor version: %d\n", minor_version);
     syslog(LOG_INFO, "request is %d bytes long\n", pret);
     syslog(LOG_INFO, "method is %.*s\n", (int)method_len, method);
