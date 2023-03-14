@@ -127,22 +127,24 @@ char* execute_script2(char* path, int* len, char** params, int numparams){
     return output;
 }
 
-char* execute_script(char* path, int* len, char** params, int numparams, char* stdin){
+char* execute_script(char* path, int* len, char** params, int numparams, char* form){
     char * extension, *aux;
     int msglen = 0, i;
     aux = strtok(path, "?");
     extension = get_extension(aux);
 
     int pipefd[2];
-    char buf[100];
+    char *buf;
     char aux2[BUFLEN];
-    char comm[BUFLEN] = "/usr/bin/php ./";
+    char comm[BUFLEN] = "/usr/bin/php";
     char name[BUFLEN] = "php";
     char header[BUFLEN] = "";
     char *output, **args;
+
+    buf = (char*)malloc(BUFLEN*sizeof(char));
     
     if (strcmp(extension, PY)==0){
-        strcpy(comm, "/usr/bin/python3 ./");
+        strcpy(comm, "/usr/bin/python3");
         strcpy(name,"python3");
     }
 
@@ -170,7 +172,7 @@ char* execute_script(char* path, int* len, char** params, int numparams, char* s
 
 
 
-    printf("AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA\n");
+   
     
     printf("name: %s\n", name);
 
@@ -193,8 +195,8 @@ char* execute_script(char* path, int* len, char** params, int numparams, char* s
     } else {
         // parent process - send input to the script and read output from the script
         close(pipefd[0]);  // close the read end of the pipe
-        write(pipefd[1], stdin, strlen(stdin));  // send input to the script
-        read(pipefd[0], buf, 100);  // read output from the script
+        write(pipefd[1], form, strlen(form));  // send input to the script
+        *len = read(pipefd[0], buf, 100);  // read output from the script
        
         close(pipefd[1]);
         free(args);

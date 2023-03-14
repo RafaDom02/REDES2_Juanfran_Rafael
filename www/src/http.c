@@ -219,6 +219,9 @@ STATUS POST(const char* path, const char* server_signature, int minor_version, c
 
     syslog(LOG_INFO, "msg: %s", msg);
 
+    printf("BUF: %s\n", buf);
+    printf("MSG: %s\n", msg);
+
 
     size_total = strlen(buf) + msglen;
     total = malloc(size_total*sizeof(void));
