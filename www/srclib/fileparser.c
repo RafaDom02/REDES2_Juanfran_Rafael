@@ -154,7 +154,7 @@ char* execute_script(char* path, int* len, char** params, int numparams, char* f
         close(pipefd[1]);  // close the write end of the pipe
         dup2(pipefd[0], STDIN_FILENO);
         close(readfd[0]);
-        dup2(readfd[1], STDOUT_FILENO);  // replace stdin with the read end of the pipe
+        dup2(readfd[1], STDOUT_FILENO); 
         execv(comm, args);
         
         perror("execl");
