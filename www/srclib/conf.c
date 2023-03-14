@@ -4,13 +4,20 @@
 #include <locale.h>
 #include "conf.h"
 
+/********
+* FUNCIÓN: cfg_t* get_conf()
+* ARGS_IN: None
+* DESCRIPCIÓN: Obtenemos un objeto cfg_t con los datos ya guardados de server.conf
+* ARGS_OUT: cfd_t*
+********/
 cfg_t* get_conf()
 {
 	static cfg_bool_t persistance = cfg_false;
 	static char *interface = NULL;
     static char *ip = NULL;
+	static char *server_signature = NULL;
     static long int port = 8080;
-	static long int n_threads = 4;
+	static long int childs = 10;
 	
 
 	/* Although the macro used to specify an integer option is called
@@ -29,7 +36,8 @@ cfg_t* get_conf()
 		CFG_SIMPLE_STR("interface", &interface),
 		CFG_SIMPLE_STR("ip", &ip),
 		CFG_SIMPLE_INT("port", &port),
-		CFG_SIMPLE_INT("n_threads", &n_threads),
+		CFG_SIMPLE_INT("childs", &childs),
+		CFG_SIMPLE_STR("server_signature", &server_signature),
 		CFG_END()
 	};
 	cfg_t *cfg;

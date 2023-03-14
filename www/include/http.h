@@ -1,7 +1,42 @@
 #ifndef _HTTP_H
 #define _HTTP_H
 
+#define INDEX2 "/"
+#define INDEX1 "/index.html"
+#define HTML ".html"
+#define JPG ".jpg"
+#define JPEG ".jpeg"
+#define TXT ".txt"
+#define GIF ".gif"
+#define MPG ".mpg"
+#define MPEG ".mpeg"
+#define DOC ".doc"
+#define DOCX ".docx"
+#define PDF ".pdf"
+#define PY ".py"
+#define PHP ".php"
+#define ICO ".ico"
+#define CSS ".css"
+#define JS ".js"
+#define PNG ".png"
+#define SVG ".svg"
+#define OK200 "200 OK"
+#define ERROR404 "404 NOT FOUND"
+#define ERROR400 "400 BAD REQUEST"
+#define OPTIONS_HEADER  "HTTP/1.%d %s\r\nAllow: %s\r\nContent-Length: 0\r\nServer: %s\r\n\r\n"
+#define HTML_HEADER     "HTTP/1.%d %s\r\nContent-Type: text/html\r\nContent-Lenght: %d\r\nDate: %s\r\nLast-modified: %s\r\nServer: %s\r\n\r\n"
+#define JPG_HEADER      "HTTP/1.%d %s\r\nContent-Type: image/jpeg\r\nContent-Lenght: %d\r\nDate: %s\r\nLast-modified: %s\r\nServer: %s\r\n\r\n"
+#define PNG_HEADER      "HTTP/1.%d %s\r\nContent-Type: image/png\r\nContent-Lenght: %d\r\nDate: %s\r\nLast-modified: %s\r\nServer: %s\r\n\r\n"
+#define TXT_HEADER      "HTTP/1.%d %s\r\nContent-Type: text/plain\r\nContent-Lenght: %d\r\nDate: %s\r\nLast-modified: %s\r\nServer: %s\r\n\r\n"
+#define GIF_HEADER      "HTTP/1.%d %s\r\nContent-Type: image/gif\r\nContent-Lenght: %d\r\nDate: %s\r\nLast-modified: %s\r\nServer: %s\r\n\r\n"
+#define VIDEO_HEADER    "HTTP/1.%d %s\r\nContent-Type: video/mpeg\r\nContent-Lenght: %d\r\nDate: %s\r\nLast-modified: %s\r\nServer: %s\r\n\r\n"
+#define DOC_HEADER      "HTTP/1.%d %s\r\nContent-Type: application/msword\r\nContent-Lenght: %d\r\nDate: %s\r\nLast-modified: %s\r\nServer: %s\r\n\r\n"
+#define PDF_HEADER      "HTTP/1.%d %s\r\nContent-Type: application/pdf\r\nContent-Lenght: %d\r\nDate: %s\r\nLast-modified: %s\r\nServer: %s\r\n\r\n"
+#define ICO_HEADER      "HTTP/1.%d %s\r\nContent-Type: image/x-icon\r\nContent-Length: %d\r\nDate: %s\r\nLast-modified: %s\r\nServer: %s\r\n\r\n"
+#define JS_HEADER       "HTTP/1.%d %s\r\nContent-Type: text/javascript\r\nContent-Length: %d\r\nDate: %s\r\nLast-modified: %s\r\nServer: %s\r\n\r\n"
+#define CSS_HEADER      "HTTP/1.%d %s\r\nContent-Type: text/css\r\nContent-Length: %d\r\nDate: %s\r\nLast-modified: %s\r\nServer: %s\r\n\r\n"
+#define SVG_HEADER      "HTTP/1.%d %s\r\nContent-Type: image/svg+xml\r\nContent-Length: %d\r\nDate: %s\r\nLast-modified: %s\r\nServer: %s\r\n\r\n"
 
-int http(int sock);
+int http(int fd, char *server_signature);
 
 #endif
