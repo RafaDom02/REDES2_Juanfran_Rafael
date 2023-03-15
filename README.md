@@ -17,7 +17,7 @@ Uso
     
 2º Ejecución del `Makefile` ya sea con `make` o `make all`. 
 
-3º Ejecución del servidor ejecutando `server` que se encuentra dentro de la carpeta /www.
+3º Ejecución del servidor ejecutando `server` que se encuentra dentro de la carpeta /[www](https://github.com/RafaDom02/REDES2_Juanfran_Rafael/tree/main/www).
 
 4º Por la terminal se imprimirá la `IP`, `Puerto`, junto a más información de interes.
 
