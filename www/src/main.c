@@ -74,13 +74,13 @@ int main(int argv, char** argc){
 
     server_signature = cfg_getstr(conf, "server_signature");
     //Demonizamos el proceso
-    /* if(to_demonize()){
+    if(to_demonize()){
         cfg_free(conf);
         closelog();
         free(ip);
         free(server_signature);
         return EXIT_FAILURE;  //Creo que funciona pero no estoy seguro.
-    } */
+    }
 
     nchilds = cfg_getint(conf, "childs");
     if(nchilds > MAX){

@@ -65,7 +65,6 @@ int get_params(char* extension, char** params){
         params[i] = (char*)malloc(64*sizeof(char)); 
         strcpy(params[i],token); 
         token = strtok(NULL, "+"); 
-        printf("%s\n", params[i]);
         i++;
     }
     return i;
