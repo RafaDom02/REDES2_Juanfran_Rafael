@@ -30,9 +30,8 @@ int connfd;
 * DESCRIPCIÓN: Se encarga de ejecutar el codigo para el correcto funcionamiento del método GET
 * ARGS_OUT: STATUS - OK o ERROR
 ********/
-STATUS GET(const char *path, const char* server_signature, int minor_version)
-{
-    int msglen, size_total, numparams = 0, i;
+STATUS GET(const char *path, const char* server_signature, int minor_version){
+    int msglen, size_total, numparams = 0, i, buflen;
     char buf[BUFLEN], date[BUFLEN], lastmodified[BUFLEN];
     const char *extension, *filename;
     char ** params;
@@ -191,8 +190,7 @@ STATUS GET(const char *path, const char* server_signature, int minor_version)
 * DESCRIPCIÓN: Se encarga de ejecutar el codigo para el correcto funcionamiento del método POST
 * ARGS_OUT: STATUS - OK o ERROR
 ********/
-STATUS POST(const char* path, const char* server_signature, int minor_version, char* form)
-{
+STATUS POST(const char* path, const char* server_signature, int minor_version, char* form){
     
     char * msg = NULL, **params = NULL, buf[BUFLEN] = "", date[BUFLEN] = "", lastmodified[BUFLEN] = "", *total = NULL;
     int msglen = 0, numparams = 0, size_total = 0;
@@ -202,6 +200,8 @@ STATUS POST(const char* path, const char* server_signature, int minor_version, c
     time_t now = time(NULL);
     struct tm* tm_info = gmtime(&now), *tm_lm = NULL;
     struct stat attr;
+
+    
     
 
     //Obtenemos la fecha actual y la fecha de ultima modificación del fichero deseado

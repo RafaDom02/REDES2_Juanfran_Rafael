@@ -75,8 +75,8 @@ int get_params(char* extension, char** params){
 /********
 * FUNCIÓN: char* execute_script(char* path, int* len, char** params, int numparams)
 * ARGS_IN: char* path - 
-* DESCRIPCIÓN: Dada una string de argumentos http "?variableGET=hola+mundo+GET 
-*              separa los parametros en una array de strings"
+* DESCRIPCIÓN: Ejecuta el script dado por la ruta con sus respectivos argumentos y entrada estandar
+* para despues recoger la salida y devolverla
 * ARGS_OUT: int - número de parámetros, -1 en caso de error
 ********/
 char* execute_script(char* path, int* len, char** params, int numparams, char* form){
@@ -101,6 +101,10 @@ char* execute_script(char* path, int* len, char** params, int numparams, char* f
     }
 
     buf = (char*)malloc(BUFLEN*sizeof(char));
+    if(!buf){
+        return NULL;
+    }
+    
     
     if (strcmp(extension, PY)==0){
         strcpy(comm, "/usr/bin/python3");
@@ -178,7 +182,7 @@ char* execute_script(char* path, int* len, char** params, int numparams, char* f
         free(args);
     }
 
-    strcat(buf, "\0");
+    buf[*len] = '\0';
   
     return buf;
 }
@@ -234,8 +238,8 @@ void free_params(char* params, int numparams){
         return;
 
     for (i = 0; i < numparams; i++){
-        if (!params[i])
-            free(params[i]);
+        if (!(params + i))
+            free(params + i);
     }
     free(params);
 }
