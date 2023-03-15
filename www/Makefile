@@ -16,13 +16,17 @@ LIBS = $(LIB_DIR)/conf.a $(LIB_DIR)/fileparser.a $(LIB_DIR)/ip.a $(LIB_DIR)/pico
 
 all: clean objdir libdir $(EXE)
 
+install:
+	sudo apt update
+	sudo apt install libconfuse-dev
+
 objdir:
 	mkdir -p obj
 
 libdir:
 	mkdir -p lib
 
-$(EXE): $(OBJ_DIR)/main.o $(OBJ_DIR)/http.o $(LIBS) 
+$(EXE): $(OBJ_DIR)/main.o $(OBJ_DIR)/http.o $(LIBS)
 	$(CC) $(CFLAGS) $(LDFLAGS) $^  -o $@ 
 
 $(OBJ_DIR)/main.o: $(MAIN_SRC) $(wildcard $(INCLUDE_DIR)/*.h)

@@ -20,6 +20,7 @@
 
 
 #define MAX 15
+#define MAXLISTEN 100
 #define MAXPATH 200
 
 int soc;
@@ -84,13 +85,12 @@ int main(int argv, char** argc){
 
     nchilds = cfg_getint(conf, "childs");
     if(nchilds > MAX){
-        syslog(LOG_INFO, "Too many childs, reduced to %d child(s).", MAX);
+        syslog(LOG_INFO, "Too many childs, reduced to %d childs.\n", MAX);
         nchilds = MAX;
     }
-    childs = (int*)malloc(nchilds*sizeof(int));
-    if(!childs){
-        syslog(LOG_ERR, "Malloc error.\n");
-
+    if(nchilds < 0){
+        syslog(LOG_INFO, "Invalid number of childs, set to %d childs.\n", MAX);
+        nchilds = MAX;
     }
 
     port = cfg_getint(conf, "port");
@@ -158,7 +158,7 @@ int main(int argv, char** argc){
         syslog(LOG_INFO, "Socket successfully binded..\n");   
     
     /****El servidor espera un paquete****/
-     if ((listen(soc, 100)) != 0) {
+     if ((listen(soc, MAXLISTEN)) != 0) {
         syslog(LOG_ERR, "Socket listen failure.\n");
         close(soc);
         cfg_free(conf);
@@ -172,6 +172,7 @@ int main(int argv, char** argc){
 
     if(conf != NULL) cfg_free(conf);
     /****El servidor acepta al cliente****/
+
     //####################### MULTI PROCESO #######################//
     if(run_http(server_signature) == EXIT_FAILURE){
         syslog(LOG_ERR, "Childs creation failure.\n");
