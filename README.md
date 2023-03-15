@@ -8,18 +8,24 @@ Uso
 ---
 
 1º Configuraremos a nuestro gusto el fichero `server.conf` con los siguientes parametros:
+
     interface=(nombre de la interfaz en la que se abrirá el socket, para ello ip=Default, en caso de que interface=Default, se abrirá el socket a nivel del router).
     ip=(nombre de la IP, ip=default si se quiere usar una interfaz).
     server_signature=(Nombre del servidor).
     port=(Numero del puerto al que se quiere conectar).
     childs=(Numero de hijos del pre-fork).
+    
 2º Ejecución del `Makefile` ya sea con `make` o `make all`. 
+
 3º Ejecución del servidor ejecutando `server` que se encuentra dentro de la carpeta /www.
+
 4º Por la terminal se imprimirá la `IP`, `Puerto`, junto a más información de interes.
+
 5º Abrir un navegador de internet y acceder realizando una busqueda URL como `IP:Puerto`.
 
 Referencias
 -----------
 
 Codigo de [Pacman](https://codepen.io/hellokatili/pen/xwKRmo).
+
 Codigo de [Snake](https://codepen.io/CaioPaiola/pen/nojJmQ).
